@@ -7,9 +7,7 @@
 
 set -o pipefail
 
-# ============================================================
-# 颜色定义
-# ============================================================
+# ── 颜色 ──
 readonly COLOR_RESET='\033[0m'
 readonly COLOR_RED='\033[0;31m'
 readonly COLOR_GREEN='\033[0;32m'
@@ -19,29 +17,32 @@ readonly COLOR_CYAN='\033[0;36m'
 readonly COLOR_BOLD='\033[1m'
 readonly COLOR_DIM='\033[2m'
 
-# ============================================================
-# 项目根目录（脚本在 scripts/ 下，dirname 两次得到根目录）
-# ============================================================
+# ── 项目根目录 ──
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# ============================================================
-# 输出函数
-# ============================================================
-info()    { echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET}  $*"; }
-success() { echo -e "${COLOR_GREEN}[✔]${COLOR_RESET}    $*"; }
-warn()    { echo -e "${COLOR_YELLOW}[WARN]${COLOR_RESET}  $*"; }
-error()   { echo -e "${COLOR_RED}[✘]${COLOR_RESET}    $*" >&2; }
-header()  { echo -e "\n${COLOR_CYAN}${COLOR_BOLD}$*${COLOR_RESET}\n"; }
-dim()     { echo -e "${COLOR_DIM}$*${COLOR_RESET}"; }
+# ── 输出函数（等宽前缀，message 始终对齐在同一列） ──
+# [INFO]  [ OK ]  [WARN]  [FAIL]  都是 6 字符，后缀 2 空格 → 消息从第 9 列开始
+info()    { printf "${COLOR_BLUE}[INFO]${COLOR_RESET}  %s\n" "$*"; }
+success() { printf "${COLOR_GREEN}[ OK ]${COLOR_RESET}  %s\n" "$*"; }
+warn()    { printf "${COLOR_YELLOW}[WARN]${COLOR_RESET}  %s\n" "$*"; }
+error()   { printf "${COLOR_RED}[FAIL]${COLOR_RESET}  %s\n" "$*" >&2; }
 
-# 输出分隔线
-separator() {
-    echo -e "${COLOR_DIM}$(printf '━%.0s' {1..50})${COLOR_RESET}"
+# 标题行
+header() {
+    echo ""
+    printf "${COLOR_CYAN}${COLOR_BOLD}── %s${COLOR_RESET}\n" "$*"
+    echo ""
 }
 
-# ============================================================
-# 环境变量加载
-# ============================================================
+# 次级信息（调用方自行控制缩进）
+dim() { printf "${COLOR_DIM}%s${COLOR_RESET}\n" "$*"; }
+
+# 分隔线
+separator() {
+    printf "${COLOR_DIM}%s${COLOR_RESET}\n" "$(printf '─%.0s' {1..52})"
+}
+
+# ── 环境变量加载 ──
 load_env() {
     local env_file="${PROJECT_ROOT}/.env"
     if [[ ! -f "$env_file" ]]; then
@@ -54,21 +55,16 @@ load_env() {
     set +a
 }
 
-# ============================================================
-# Docker 检查
-# ============================================================
+# ── Docker 检查 ──
 check_docker() {
     if ! command -v docker &> /dev/null; then
         error "Docker 未安装，请先安装 Docker"
         return 1
     fi
-
     if ! docker info &> /dev/null; then
         error "Docker 未运行，请先启动 Docker"
         return 1
     fi
-
-    # 检测 compose 命令
     if docker compose version &> /dev/null; then
         COMPOSE_CMD="docker compose"
     elif command -v docker-compose &> /dev/null; then
@@ -80,9 +76,7 @@ check_docker() {
     readonly COMPOSE_CMD
 }
 
-# ============================================================
-# Compose 命令包装
-# ============================================================
+# ── Compose 命令包装 ──
 compose_cmd() {
     if [[ -z "${COMPOSE_CMD:-}" ]]; then
         check_docker || return 1
@@ -90,70 +84,47 @@ compose_cmd() {
     cd "$PROJECT_ROOT" && $COMPOSE_CMD "$@"
 }
 
-# ============================================================
-# 服务列表
-# ============================================================
+# ── 服务列表 ──
 get_services() {
     compose_cmd config --services 2>/dev/null
 }
 
-# ============================================================
-# 检查服务是否运行
-# ============================================================
+# ── 检查服务是否运行 ──
 is_service_running() {
-    local service="$1"
-    local container_id
+    local service="$1" container_id status
     container_id=$(compose_cmd ps -q "$service" 2>/dev/null)
-    if [[ -z "$container_id" ]]; then
-        return 1
-    fi
-    local status
+    [[ -z "$container_id" ]] && return 1
     status=$(docker inspect -f '{{.State.Status}}' "$container_id" 2>/dev/null)
     [[ "$status" == "running" ]]
 }
 
-# ============================================================
-# 获取容器资源使用
-# ============================================================
+# ── 获取容器资源 ──
 get_container_stats() {
-    local service="$1"
-    local container_id
+    local service="$1" container_id
     container_id=$(compose_cmd ps -q "$service" 2>/dev/null)
-    if [[ -z "$container_id" ]]; then
-        echo "N/A"
-        return
-    fi
+    [[ -z "$container_id" ]] && { echo "N/A"; return; }
     docker stats --no-stream --format "CPU {{.CPUPerc}} | MEM {{.MemUsage}} | NET {{.NetIO}}" "$container_id" 2>/dev/null || echo "N/A"
 }
 
-# ============================================================
-# 校验服务名是否在 compose 配置中
-# 用法: validate_service "postgres"  → 有效返回 0，无效返回 1 并报错
-# ============================================================
+# ── 校验服务名 ──
 validate_service() {
     local target="$1"
-    if [[ -z "$target" ]]; then
-        return 0  # 空表示操作全部服务，合法
-    fi
+    [[ -z "$target" ]] && return 0
     while IFS= read -r svc; do
-        if [[ "$svc" == "$target" ]]; then
-            return 0
-        fi
+        [[ "$svc" == "$target" ]] && return 0
     done < <(get_services 2>/dev/null)
     error "未知服务: $target"
-    info "可用服务: $(get_services 2>/dev/null | tr '\n' ' ')"
+    info "可用: $(get_services 2>/dev/null | tr '\n' ' ')"
     return 1
 }
 
-# ============================================================
-# 确认操作
-# ============================================================
+# ── 确认操作 ──
 confirm() {
     local prompt="${1:-确认执行此操作?}"
-    echo -e "${COLOR_YELLOW}${prompt} (y/N)${COLOR_RESET}"
+    printf "${COLOR_YELLOW}%s (y/N) ${COLOR_RESET}" "$prompt"
     read -r answer
     case "$answer" in
         [Yy]*) return 0 ;;
-        *) return 1 ;;
+        *)     return 1 ;;
     esac
 }
