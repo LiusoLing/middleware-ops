@@ -27,7 +27,7 @@ else
 fi
 
 # 检查是否有正在运行的服务
-local has_running=false
+has_running=false
 while IFS= read -r service; do
     if is_service_running "$service"; then
         if [[ -z "$TARGET_SERVICE" ]] || [[ "$service" == "$TARGET_SERVICE" ]]; then
@@ -56,12 +56,12 @@ echo ""
 
 # 等待健康检查
 info "等待服务健康检查..."
-local max_wait=60
-local waited=0
-local interval=2
+max_wait=60
+waited=0
+interval=2
 
 while [[ $waited -lt $max_wait ]]; do
-    local all_healthy=true
+    all_healthy=true
 
     if [[ -n "$TARGET_SERVICE" ]]; then
         if ! is_service_running "$TARGET_SERVICE"; then

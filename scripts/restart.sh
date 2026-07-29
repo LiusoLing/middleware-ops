@@ -53,12 +53,12 @@ echo ""
 
 # 等待健康检查
 info "等待服务就绪..."
-local max_wait=60
-local waited=0
-local interval=2
+max_wait=60
+waited=0
+interval=2
 
 while [[ $waited -lt $max_wait ]]; do
-    local all_healthy=true
+    all_healthy=true
 
     if [[ -n "$TARGET_SERVICE" ]]; then
         if ! is_service_running "$TARGET_SERVICE"; then

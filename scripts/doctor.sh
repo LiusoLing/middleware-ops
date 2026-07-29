@@ -58,7 +58,7 @@ echo -e "${COLOR_BOLD}1. Docker Environment${COLOR_RESET}"
 echo ""
 
 if command -v docker &> /dev/null; then
-    local docker_version
+    docker_version
     docker_version=$(docker --version 2>/dev/null | head -1)
     check_pass "Docker CLI: $docker_version"
 
@@ -66,7 +66,7 @@ if command -v docker &> /dev/null; then
         check_pass "Docker Daemon: running"
 
         # 检查存储驱动
-        local storage_driver
+        storage_driver
         storage_driver=$(docker info --format '{{.Driver}}' 2>/dev/null || echo "unknown")
         if [[ "$storage_driver" == "overlay2" ]]; then
             check_pass "Storage Driver: $storage_driver"
@@ -79,11 +79,11 @@ if command -v docker &> /dev/null; then
 
     # Docker Compose
     if docker compose version &> /dev/null; then
-        local compose_version
+        compose_version
         compose_version=$(docker compose version 2>/dev/null | head -1)
         check_pass "Docker Compose: $compose_version"
     elif command -v docker-compose &> /dev/null; then
-        local compose_version
+        compose_version
         compose_version=$(docker-compose --version 2>/dev/null | head -1)
         check_warn "Docker Compose (legacy): $compose_version (建议使用 docker compose)"
     else
@@ -140,13 +140,13 @@ echo -e "${COLOR_BOLD}3. Port Availability${COLOR_RESET}"
 echo ""
 
 check_port() {
-    local port="$1"
-    local service="$2"
+    port="$1"
+    service="$2"
     if command -v lsof &> /dev/null; then
-        local pid
+        pid
         pid=$(lsof -ti:"$port" 2>/dev/null || true)
         if [[ -n "$pid" ]]; then
-            local process_name
+            process_name
             process_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
             # 如果是 docker-proxy 则认为是正常的
             if [[ "$process_name" == *"docker"* ]] || [[ "$process_name" == "com.docker"* ]]; then
@@ -180,8 +180,8 @@ echo -e "${COLOR_BOLD}4. Directories & Permissions${COLOR_RESET}"
 echo ""
 
 check_dir() {
-    local dir="$1"
-    local label="$2"
+    dir="$1"
+    label="$2"
     if [[ -d "$dir" ]]; then
         if [[ -r "$dir" ]]; then
             check_pass "$label: 存在且可读"
@@ -207,10 +207,10 @@ echo -e "${COLOR_BOLD}5. System Resources${COLOR_RESET}"
 echo ""
 
 # 磁盘空间
-local disk_usage
+disk_usage
 disk_usage=$(df -h "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5 " used, " $4 " available"}')
 if [[ -n "$disk_usage" ]]; then
-    local used_pct
+    used_pct
     used_pct=$(df "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5}' | sed 's/%//')
     if [[ "$used_pct" -gt 90 ]]; then
         check_warn "磁盘空间: $disk_usage (空间不足！)"
@@ -223,10 +223,10 @@ fi
 
 # inode
 if command -v df &> /dev/null; then
-    local inode_usage
+    inode_usage
     inode_usage=$(df -i "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5 " used, " $4 " available"}')
     if [[ -n "$inode_usage" ]]; then
-        local inode_pct
+        inode_pct
         inode_pct=$(df -i "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5}' | sed 's/%//')
         if [[ "$inode_pct" -gt 90 ]]; then
             check_warn "inode: $inode_usage (inode 不足！)"
@@ -239,23 +239,23 @@ fi
 # 内存
 if [[ "$(uname)" == "Darwin" ]]; then
     # macOS
-    local total_mem
+    total_mem
     total_mem=$(sysctl -n hw.memsize 2>/dev/null | awk '{printf "%.1f GB", $1/1024/1024/1024}')
-    local free_mem
+    free_mem
     free_mem=$(vm_stat 2>/dev/null | awk '/Pages free/ {free=$3} /Pages inactive/ {inactive=$3} END {printf "%.1f GB", (free+inactive)*4096/1024/1024/1024}')
     if [[ -n "$total_mem" ]]; then
         check_pass "内存: 总共 $total_mem"
     fi
 elif command -v free &> /dev/null; then
     # Linux
-    local total_mem
+    total_mem
     total_mem=$(free -h 2>/dev/null | awk '/^Mem:/ {print $2}')
-    local avail_mem
+    avail_mem
     avail_mem=$(free -h 2>/dev/null | awk '/^Mem:/ {print $7}')
     if [[ -n "$total_mem" ]]; then
-        local avail_mem_bytes
+        avail_mem_bytes
         avail_mem_bytes=$(free 2>/dev/null | awk '/^Mem:/ {print $7}')
-        local min_mem=$((512 * 1024))  # 512MB in KB
+        min_mem=$((512 * 1024))  # 512MB in KB
         if [[ "$avail_mem_bytes" -lt "$min_mem" ]]; then
             check_warn "内存: $total_mem 总共, $avail_mem 可用 (可用内存偏少)"
         else
@@ -266,7 +266,7 @@ fi
 
 # 检查 swap（仅 Linux）
 if [[ "$(uname)" == "Linux" ]] && command -v free &> /dev/null; then
-    local swap_total
+    swap_total
     swap_total=$(free 2>/dev/null | awk '/^Swap:/ {print $2}')
     if [[ "$swap_total" != "0" ]] && [[ -n "$swap_total" ]]; then
         check_pass "Swap: 已配置"
@@ -285,7 +285,7 @@ echo ""
 
 # 检查 Docker 磁盘使用
 if docker info &> /dev/null; then
-    local docker_disk
+    docker_disk
     docker_disk=$(docker system df 2>/dev/null | head -4 || true)
     if [[ -n "$docker_disk" ]]; then
         dim "$docker_disk"
@@ -304,7 +304,7 @@ check_pass "OS: $(uname -s) $(uname -r)"
 check_pass "Architecture: $(uname -m)"
 
 if command -v bash &> /dev/null; then
-    local bash_version
+    bash_version
     bash_version=$(bash --version 2>/dev/null | head -1)
     check_pass "Shell: $bash_version"
 fi

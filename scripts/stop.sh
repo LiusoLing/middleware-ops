@@ -27,7 +27,7 @@ else
 fi
 
 # 列出运行中的服务
-local running_services=""
+running_services=""
 while IFS= read -r service; do
     if [[ -n "$TARGET_SERVICE" ]] && [[ "$service" != "$TARGET_SERVICE" ]]; then
         continue
@@ -54,7 +54,7 @@ echo ""
 
 # 确认已停止
 sleep 2
-local still_running=""
+still_running=""
 while IFS= read -r service; do
     if [[ -n "$TARGET_SERVICE" ]] && [[ "$service" != "$TARGET_SERVICE" ]]; then
         continue

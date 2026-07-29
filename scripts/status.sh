@@ -48,15 +48,15 @@ while IFS= read -r service; do
     fi
 
     if is_service_running "$service" 2>/dev/null; then
-        local container_id
+        container_id
         container_id=$(compose_cmd ps -q "$service" 2>/dev/null)
-        local health
+        health
         health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}' "$container_id" 2>/dev/null || echo "N/A")
-        local ports
+        ports
         ports=$(docker inspect -f '{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} -> {{(index $conf 0).HostPort}} {{end}}' "$container_id" 2>/dev/null || echo "N/A")
-        local image
+        image
         image=$(docker inspect -f '{{.Config.Image}}' "$container_id" 2>/dev/null || echo "N/A")
-        local created
+        created
         created=$(docker inspect -f '{{.Created}}' "$container_id" 2>/dev/null | cut -d'T' -f1 || echo "N/A")
 
         printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-16s${COLOR_RESET} ${COLOR_GREEN}Running${COLOR_RESET}\n" "$service"
@@ -67,10 +67,10 @@ while IFS= read -r service; do
 
         # 单服务模式显示更多详情
         if [[ -n "$TARGET_SERVICE" ]]; then
-            local ip_addr
+            ip_addr
             ip_addr=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_id" 2>/dev/null || echo "N/A")
             dim "     IP:       $ip_addr"
-            local env_vars
+            env_vars
             env_vars=$(docker inspect -f '{{range .Config.Env}}{{.}} {{end}}' "$container_id" 2>/dev/null | tr ' ' '\n' | grep -v 'PASSWORD\|PASS\|SECRET\|KEY' | head -10 || echo "N/A")
             if [[ "$env_vars" != "N/A" ]]; then
                 dim "     Env:"
@@ -91,10 +91,10 @@ if [[ -z "$TARGET_SERVICE" ]]; then
     echo -e "${COLOR_BOLD}Network${COLOR_RESET}"
     echo ""
 
-    local network_name="docker-network"
+    network_name="docker-network"
     if docker network inspect "$network_name" &>/dev/null; then
         printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-20s${COLOR_RESET} ${COLOR_GREEN}Active${COLOR_RESET}\n" "$network_name"
-        local subnet
+        subnet
         subnet=$(docker network inspect "$network_name" -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' 2>/dev/null || echo "N/A")
         dim "     Subnet:   $subnet"
     else
@@ -109,9 +109,9 @@ if [[ -z "$TARGET_SERVICE" ]]; then
 
     while IFS= read -r volume; do
         if docker volume inspect "$volume" &>/dev/null; then
-            local mountpoint
+            mountpoint
             mountpoint=$(docker volume inspect "$volume" -f '{{.Mountpoint}}' 2>/dev/null || echo "N/A")
-            local size
+            size
             if [[ -d "$mountpoint" ]]; then
                 size=$(du -sh "$mountpoint" 2>/dev/null | cut -f1 || echo "N/A")
             else
@@ -137,9 +137,9 @@ while IFS= read -r service; do
     fi
 
     if is_service_running "$service" 2>/dev/null; then
-        local container_id
+        container_id
         container_id=$(compose_cmd ps -q "$service" 2>/dev/null)
-        local stats
+        stats
         stats=$(docker stats --no-stream --format "CPU: {{.CPUPerc}} | Mem: {{.MemUsage}} ({{.MemPerc}})" "$container_id" 2>/dev/null || echo "N/A")
         printf "  ${COLOR_BOLD}%-16s${COLOR_RESET}\n" "$service"
         dim "     $stats"
@@ -153,9 +153,9 @@ echo ""
 
 if [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "postgres" ]]; then
     if is_service_running "postgres" 2>/dev/null; then
-        local pg_host="${POSTGRES_HOST:-localhost}"
-        local pg_port="${POSTGRES_PORT:-5432}"
-        local pg_user="${POSTGRES_USER:-postgres}"
+        pg_host="${POSTGRES_HOST:-localhost}"
+        pg_port="${POSTGRES_PORT:-5432}"
+        pg_user="${POSTGRES_USER:-postgres}"
         printf "  ${COLOR_BOLD}%-16s${COLOR_RESET} postgresql://%s:****@%s:%s/${POSTGRES_DB:-postgres}\n" \
             "PostgreSQL" "$pg_user" "$pg_host" "$pg_port"
     fi
@@ -163,8 +163,8 @@ fi
 
 if [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "redis" ]]; then
     if is_service_running "redis" 2>/dev/null; then
-        local redis_host="${REDIS_HOST:-localhost}"
-        local redis_port="${REDIS_PORT:-6379}"
+        redis_host="${REDIS_HOST:-localhost}"
+        redis_port="${REDIS_PORT:-6379}"
         printf "  ${COLOR_BOLD}%-16s${COLOR_RESET} redis://:%s@%s:%s\n" \
             "Redis" "${REDIS_PASSWORD:0:4}****" "$redis_host" "$redis_port"
     fi

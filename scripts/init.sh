@@ -46,7 +46,7 @@ success "Docker 环境就绪 (${COMPOSE_CMD})"
 
 # ---- 3. 创建必要目录 ----
 info "检查目录结构..."
-local dirs=(
+dirs=(
     "${PROJECT_ROOT}/postgres/data"
     "${PROJECT_ROOT}/redis/data"
     "${PROJECT_ROOT}/backups/postgres"
@@ -80,7 +80,7 @@ success "镜像拉取完成"
 
 # ---- 6. 创建 Docker 网络（如果不存在） ----
 info "检查 Docker 网络..."
-local network_name="docker-network"
+network_name="docker-network"
 if docker network inspect "$network_name" &>/dev/null; then
     success "网络 $network_name 已存在"
 else

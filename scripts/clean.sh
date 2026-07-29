@@ -79,11 +79,11 @@ echo ""
 if $CLEAN_LOGS; then
     if [[ -n "$TARGET_SERVICE" ]]; then
         info "清理 ${TARGET_SERVICE} 容器日志..."
-        local container_id
+        container_id
         container_id=$(compose_cmd ps -q "$TARGET_SERVICE" 2>/dev/null || true)
         if [[ -n "$container_id" ]]; then
             # 截断容器日志文件而不是删除容器
-            local log_path
+            log_path
             log_path=$(docker inspect -f '{{.LogPath}}' "$container_id" 2>/dev/null || true)
             if [[ -n "$log_path" ]] && [[ -f "$log_path" ]]; then
                 if echo -n | sudo tee "$log_path" &>/dev/null || echo -n > "$log_path" 2>/dev/null; then
@@ -102,10 +102,10 @@ if $CLEAN_LOGS; then
     else
         info "清理所有容器日志..."
         while IFS= read -r service; do
-            local cid
+            cid
             cid=$(compose_cmd ps -q "$service" 2>/dev/null || true)
             if [[ -n "$cid" ]]; then
-                local log_path
+                log_path
                 log_path=$(docker inspect -f '{{.LogPath}}' "$cid" 2>/dev/null || true)
                 if [[ -n "$log_path" ]] && [[ -f "$log_path" ]]; then
                     if echo -n | sudo tee "$log_path" &>/dev/null || echo -n > "$log_path" 2>/dev/null; then
@@ -123,10 +123,10 @@ if $CLEAN_LOGS; then
     fi
 
     # 清理本地日志目录
-    local log_dir="${PROJECT_ROOT}/logs"
+    log_dir="${PROJECT_ROOT}/logs"
     if [[ -d "$log_dir" ]]; then
         info "清理本地日志文件..."
-        local log_count
+        log_count
         log_count=$(find "$log_dir" -type f ! -name '.gitkeep' | wc -l | tr -d ' ')
         if [[ "$log_count" -gt 0 ]]; then
             find "$log_dir" -type f ! -name '.gitkeep' -delete
@@ -179,7 +179,7 @@ if $CLEAN_VOLUMES; then
     warn "以下数据卷未被使用，将被删除:"
     docker volume ls -qf dangling=true | while IFS= read -r vol; do
         if [[ -n "$vol" ]]; then
-            local size
+            size
             size=$(docker volume inspect "$vol" -f '{{.Mountpoint}}' 2>/dev/null | xargs du -sh 2>/dev/null | cut -f1 || echo "N/A")
             dim "  - $vol ($size)"
         fi

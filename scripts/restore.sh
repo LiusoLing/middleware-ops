@@ -54,22 +54,22 @@ if $LIST_ONLY; then
     info "可用备份:"
     echo ""
     if [[ -d "$BACKUP_ROOT" ]]; then
-        local dirs
+        dirs
         dirs=$(ls -1t "$BACKUP_ROOT" 2>/dev/null || true)
         if [[ -z "$dirs" ]]; then
             dim "  (无备份)"
         else
             while IFS= read -r dir; do
                 if [[ -d "${BACKUP_ROOT}/${dir}" ]]; then
-                    local size
+                    size
                     size=$(du -sh "${BACKUP_ROOT}/${dir}" 2>/dev/null | cut -f1)
                     printf "  ${COLOR_BOLD}%-16s${COLOR_RESET} %s\n" "$dir" "$size"
 
                     if [[ -f "${BACKUP_ROOT}/${dir}/metadata.json" ]]; then
-                        local pg_file
+                        pg_file
                         pg_file=$(grep -o '"file": *"[^"]*"' "${BACKUP_ROOT}/${dir}/metadata.json" 2>/dev/null | head -1 | cut -d'"' -f4 || echo "N/A")
                         dim "    PostgreSQL: ${pg_file:-N/A}"
-                        local redis_file
+                        redis_file
                         redis_file=$(grep -o '"file": *"[^"]*"' "${BACKUP_ROOT}/${dir}/metadata.json" 2>/dev/null | tail -1 | cut -d'"' -f4 || echo "N/A")
                         dim "    Redis: ${redis_file:-N/A}"
                     fi

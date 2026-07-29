@@ -199,7 +199,7 @@ echo ""
 if $POSTGRES_BACKUP_SUCCESS || $REDIS_BACKUP_SUCCESS; then
     info "生成备份元信息..."
 
-    local metadata_file="${BACKUP_PATH}/metadata.json"
+    metadata_file="${BACKUP_PATH}/metadata.json"
 
     # 如果已有 metadata（之前该日期已备份且现在只备份了部分服务），合并
     if [[ -f "$metadata_file" ]]; then
@@ -242,7 +242,7 @@ echo ""
 # ============================================================
 info "清理 ${RETENTION_DAYS} 天前的备份..."
 
-local deleted_count=0
+deleted_count=0
 while IFS= read -r -d '' old_backup; do
     if [[ -d "$old_backup" ]]; then
         rm -rf "$old_backup"
@@ -266,12 +266,12 @@ info "当前备份列表:"
 echo ""
 
 if [[ -d "$BACKUP_ROOT" ]]; then
-    local backup_dirs
+    backup_dirs
     backup_dirs=$(ls -1t "$BACKUP_ROOT" 2>/dev/null | head -10)
     if [[ -n "$backup_dirs" ]]; then
         while IFS= read -r dir; do
             if [[ -d "${BACKUP_ROOT}/${dir}" ]]; then
-                local size
+                size
                 size=$(du -sh "${BACKUP_ROOT}/${dir}" 2>/dev/null | cut -f1)
                 printf "  ${COLOR_BOLD}%-16s${COLOR_RESET} %s\n" "$dir" "$size"
                 ls -1 "${BACKUP_ROOT}/${dir}" 2>/dev/null | while IFS= read -r f; do
