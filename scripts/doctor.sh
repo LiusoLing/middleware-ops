@@ -3,15 +3,6 @@
 # doctor.sh — 环境自检
 # ============================================================
 # 全面检查运行环境，发现问题直接报告
-# 检查项:
-#   - Docker / Docker Compose
-#   - 配置文件完整性
-#   - 端口占用
-#   - 数据目录权限
-#   - 磁盘空间 / inode
-#   - 内存 / swap
-#   - UID / GID
-#   - 存储驱动 (overlay2)
 # ============================================================
 
 set -euo pipefail
@@ -19,78 +10,62 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-header "🩺 Middleware Doctor — 环境自检"
+header "🩺  Middleware Doctor — 环境自检"
 echo ""
 
-# 问题计数器
 ISSUES=0
 WARNINGS=0
 CHECKS=0
 
-# 辅助函数
 check_pass() {
     CHECKS=$((CHECKS + 1))
-    printf "  ${COLOR_GREEN}✔${COLOR_RESET} %s\n" "$1"
+    printf "  ${COLOR_GREEN}✔${COLOR_RESET}  %s\n" "$1"
 }
 
 check_fail() {
     CHECKS=$((CHECKS + 1))
     ISSUES=$((ISSUES + 1))
-    printf "  ${COLOR_RED}✘${COLOR_RESET} %s\n" "$1"
-    if [[ -n "${2:-}" ]]; then
-        dim "    → $2"
-    fi
+    printf "  ${COLOR_RED}✘${COLOR_RESET}  %s\n" "$1"
+    [[ -n "${2:-}" ]] && dim "      → $2"
 }
 
 check_warn() {
     CHECKS=$((CHECKS + 1))
     WARNINGS=$((WARNINGS + 1))
-    printf "  ${COLOR_YELLOW}⚠${COLOR_RESET} %s\n" "$1"
-    if [[ -n "${2:-}" ]]; then
-        dim "    → $2"
-    fi
+    printf "  ${COLOR_YELLOW}⚠${COLOR_RESET}  %s\n" "$1"
+    [[ -n "${2:-}" ]] && dim "      → $2"
 }
 
 # ============================================================
 # 1. Docker 环境
 # ============================================================
-echo -e "${COLOR_BOLD}1. Docker Environment${COLOR_RESET}"
+echo -e "${COLOR_BOLD}  1. Docker Environment${COLOR_RESET}"
 echo ""
 
 if command -v docker &> /dev/null; then
-    docker_version
-    docker_version=$(docker --version 2>/dev/null | head -1)
-    check_pass "Docker CLI: $docker_version"
+    check_pass "Docker CLI     $(docker --version 2>/dev/null | head -1)"
 
     if docker info &> /dev/null; then
-        check_pass "Docker Daemon: running"
-
-        # 检查存储驱动
-        storage_driver
-        storage_driver=$(docker info --format '{{.Driver}}' 2>/dev/null || echo "unknown")
-        if [[ "$storage_driver" == "overlay2" ]]; then
-            check_pass "Storage Driver: $storage_driver"
+        check_pass "Docker Daemon  running"
+        sd=$(docker info --format '{{.Driver}}' 2>/dev/null || echo "unknown")
+        if [[ "$sd" == "overlay2" ]]; then
+            check_pass "Storage Driver $sd"
         else
-            check_warn "Storage Driver: $storage_driver (推荐 overlay2)"
+            check_warn "Storage Driver $sd (推荐 overlay2)"
         fi
     else
-        check_fail "Docker Daemon: 未运行" "请启动 Docker Desktop 或 dockerd"
+        check_fail "Docker Daemon  未运行" "请启动 Docker Desktop 或 dockerd"
     fi
 
-    # Docker Compose
     if docker compose version &> /dev/null; then
-        compose_version
-        compose_version=$(docker compose version 2>/dev/null | head -1)
-        check_pass "Docker Compose: $compose_version"
+        check_pass "Compose        $(docker compose version 2>/dev/null | head -1)"
     elif command -v docker-compose &> /dev/null; then
-        compose_version
-        compose_version=$(docker-compose --version 2>/dev/null | head -1)
-        check_warn "Docker Compose (legacy): $compose_version (建议使用 docker compose)"
+        check_warn "Compose        $(docker-compose --version 2>/dev/null | head -1) (建议使用 docker compose 插件)"
     else
-        check_fail "Docker Compose: 未安装"
+        check_fail "Compose        未安装"
     fi
 else
-    check_fail "Docker CLI: 未安装" "请安装 Docker Desktop: https://www.docker.com/products/docker-desktop"
+    check_fail "Docker CLI     未安装" "https://www.docker.com/products/docker-desktop"
 fi
 
 echo ""
@@ -98,73 +73,60 @@ echo ""
 # ============================================================
 # 2. 配置文件
 # ============================================================
-echo -e "${COLOR_BOLD}2. Configuration Files${COLOR_RESET}"
+echo -e "${COLOR_BOLD}  2. Configuration${COLOR_RESET}"
 echo ""
 
-# .env
 if [[ -f "${PROJECT_ROOT}/.env" ]]; then
-    check_pass ".env: 存在"
-
-    # 检查是否改了默认密码
+    check_pass ".env           已存在"
     load_env 2>/dev/null || true
-    if [[ "${POSTGRES_PASSWORD:-}" == "change_me_postgres" ]]; then
-        check_warn "POSTGRES_PASSWORD: 仍为默认值，请修改"
+    if [[ "${POSTGRES_PASSWORD:-}" == "change_me_postgres" ]] || [[ "${POSTGRES_PASSWORD:-}" == "change_you_password" ]]; then
+        check_warn "PG 密码        仍为默认值，请修改 .env"
     fi
-    if [[ "${REDIS_PASSWORD:-}" == "change_me_redis" ]]; then
-        check_warn "REDIS_PASSWORD: 仍为默认值，请修改"
+    if [[ "${REDIS_PASSWORD:-}" == "change_me_redis" ]] || [[ "${REDIS_PASSWORD:-}" == "change_you_password" ]]; then
+        check_warn "Redis 密码     仍为默认值，请修改 .env"
     fi
 else
-    check_fail ".env: 不存在" "请执行: cp .env.example .env"
+    check_fail ".env           不存在" "请执行: cp .env.example .env"
 fi
 
-# docker-compose.yml
-if [[ -f "${PROJECT_ROOT}/docker-compose.yml" ]]; then
-    check_pass "docker-compose.yml: 存在"
-else
-    check_fail "docker-compose.yml: 不存在" "请检查项目文件完整性"
-fi
+[[ -f "${PROJECT_ROOT}/docker-compose.yml" ]] \
+    && check_pass "compose.yml    存在" \
+    || check_fail "compose.yml    不存在"
 
-# postgresql.conf
-if [[ -f "${PROJECT_ROOT}/postgres/conf/postgresql.conf" ]]; then
-    check_pass "postgresql.conf: 存在"
-else
-    check_warn "postgresql.conf: 不存在（将使用 PostgreSQL 默认配置）"
-fi
+[[ -f "${PROJECT_ROOT}/postgres/conf/conf.d/custom.conf" ]] \
+    && check_pass "custom.conf    存在" \
+    || check_warn "custom.conf    不存在（将使用 PostgreSQL 默认配置）"
 
 echo ""
 
 # ============================================================
-# 3. 端口检查
+# 3. 端口
 # ============================================================
-echo -e "${COLOR_BOLD}3. Port Availability${COLOR_RESET}"
+echo -e "${COLOR_BOLD}  3. Ports${COLOR_RESET}"
 echo ""
 
 check_port() {
-    port="$1"
-    service="$2"
+    local p="$1" label="$2" pid pname
     if command -v lsof &> /dev/null; then
-        pid
-        pid=$(lsof -ti:"$port" 2>/dev/null || true)
+        pid=$(lsof -ti:"$p" 2>/dev/null || true)
         if [[ -n "$pid" ]]; then
-            process_name
-            process_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
-            # 如果是 docker-proxy 则认为是正常的
-            if [[ "$process_name" == *"docker"* ]] || [[ "$process_name" == "com.docker"* ]]; then
-                check_pass "端口 $port ($service): 已被 Docker 容器使用"
+            pname=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
+            if [[ "$pname" == *"docker"* ]] || [[ "$pname" == "com.docker"* ]]; then
+                check_pass ":$p ($label)    已由 Docker 占用"
             else
-                check_warn "端口 $port ($service): 被进程 $process_name (PID $pid) 占用"
+                check_warn ":$p ($label)    被 $pname (PID $pid) 占用"
             fi
         else
-            check_pass "端口 $port ($service): 可用"
+            check_pass ":$p ($label)    可用"
         fi
     elif command -v ss &> /dev/null; then
-        if ss -tlnp | grep -q ":$port "; then
-            check_warn "端口 $port ($service): 已被占用"
+        if ss -tlnp | grep -q ":$p "; then
+            check_warn ":$p ($label)    已被占用"
         else
-            check_pass "端口 $port ($service): 可用"
+            check_pass ":$p ($label)    可用"
         fi
     else
-        dim "  端口检查需要 lsof 或 ss 命令"
+        dim "    端口检查需要 lsof 或 ss 命令"
     fi
 }
 
@@ -176,102 +138,87 @@ echo ""
 # ============================================================
 # 4. 目录与权限
 # ============================================================
-echo -e "${COLOR_BOLD}4. Directories & Permissions${COLOR_RESET}"
+echo -e "${COLOR_BOLD}  4. Directories${COLOR_RESET}"
 echo ""
 
 check_dir() {
-    dir="$1"
-    label="$2"
-    if [[ -d "$dir" ]]; then
-        if [[ -r "$dir" ]]; then
-            check_pass "$label: 存在且可读"
+    local d="$1" label="$2"
+    if [[ -d "$d" ]]; then
+        if [[ -r "$d" ]]; then
+            check_pass "$label"
         else
-            check_fail "$label: 存在但不可读" "请检查目录权限: chmod 755 $dir"
+            check_fail "$label  (不可读)" "chmod 755 $d"
         fi
     else
-        check_fail "$label: 不存在" "请执行: mkdir -p $dir"
+        check_fail "$label  (不存在)" "mkdir -p $d"
     fi
 }
 
-check_dir "${PROJECT_ROOT}/postgres/data" "postgres/data"
-check_dir "${PROJECT_ROOT}/redis/data" "redis/data"
-check_dir "${PROJECT_ROOT}/backups" "backups"
-check_dir "${PROJECT_ROOT}/logs" "logs"
+check_dir "${PROJECT_ROOT}/postgres/data"  "postgres/data"
+check_dir "${PROJECT_ROOT}/redis/data"     "redis/data"
+check_dir "${PROJECT_ROOT}/backups"        "backups"
+check_dir "${PROJECT_ROOT}/logs"           "logs"
 
 echo ""
 
 # ============================================================
 # 5. 系统资源
 # ============================================================
-echo -e "${COLOR_BOLD}5. System Resources${COLOR_RESET}"
+echo -e "${COLOR_BOLD}  5. System Resources${COLOR_RESET}"
 echo ""
 
-# 磁盘空间
-disk_usage
-disk_usage=$(df -h "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5 " used, " $4 " available"}')
-if [[ -n "$disk_usage" ]]; then
-    used_pct
+# 磁盘
+disk_line=$(df -h "$PROJECT_ROOT" 2>/dev/null | tail -1)
+if [[ -n "$disk_line" ]]; then
+    disk_info=$(echo "$disk_line" | awk '{print $5 " used, " $4 " avail"}')
     used_pct=$(df "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5}' | sed 's/%//')
     if [[ "$used_pct" -gt 90 ]]; then
-        check_warn "磁盘空间: $disk_usage (空间不足！)"
+        check_warn "Disk           $disk_info ⚠"
     else
-        check_pass "磁盘空间: $disk_usage"
+        check_pass "Disk           $disk_info"
     fi
 else
-    dim "  无法检查磁盘空间"
+    dim "    无法检查磁盘空间"
 fi
 
 # inode
 if command -v df &> /dev/null; then
-    inode_usage
-    inode_usage=$(df -i "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5 " used, " $4 " available"}')
-    if [[ -n "$inode_usage" ]]; then
-        inode_pct
-        inode_pct=$(df -i "$PROJECT_ROOT" 2>/dev/null | tail -1 | awk '{print $5}' | sed 's/%//')
+    inode_line=$(df -i "$PROJECT_ROOT" 2>/dev/null | tail -1)
+    if [[ -n "$inode_line" ]]; then
+        inode_info=$(echo "$inode_line" | awk '{print $5 " used, " $4 " avail"}')
+        inode_pct=$(echo "$inode_line" | awk '{print $5}' | sed 's/%//')
         if [[ "$inode_pct" -gt 90 ]]; then
-            check_warn "inode: $inode_usage (inode 不足！)"
+            check_warn "Inode          $inode_info ⚠"
         else
-            check_pass "inode: $inode_usage"
+            check_pass "Inode          $inode_info"
         fi
     fi
 fi
 
 # 内存
 if [[ "$(uname)" == "Darwin" ]]; then
-    # macOS
-    total_mem
     total_mem=$(sysctl -n hw.memsize 2>/dev/null | awk '{printf "%.1f GB", $1/1024/1024/1024}')
-    free_mem
-    free_mem=$(vm_stat 2>/dev/null | awk '/Pages free/ {free=$3} /Pages inactive/ {inactive=$3} END {printf "%.1f GB", (free+inactive)*4096/1024/1024/1024}')
-    if [[ -n "$total_mem" ]]; then
-        check_pass "内存: 总共 $total_mem"
-    fi
+    [[ -n "$total_mem" ]] && check_pass "Memory         $total_mem total"
 elif command -v free &> /dev/null; then
-    # Linux
-    total_mem
     total_mem=$(free -h 2>/dev/null | awk '/^Mem:/ {print $2}')
-    avail_mem
     avail_mem=$(free -h 2>/dev/null | awk '/^Mem:/ {print $7}')
+    avail_kb=$(free 2>/dev/null | awk '/^Mem:/ {print $7}')
     if [[ -n "$total_mem" ]]; then
-        avail_mem_bytes
-        avail_mem_bytes=$(free 2>/dev/null | awk '/^Mem:/ {print $7}')
-        min_mem=$((512 * 1024))  # 512MB in KB
-        if [[ "$avail_mem_bytes" -lt "$min_mem" ]]; then
-            check_warn "内存: $total_mem 总共, $avail_mem 可用 (可用内存偏少)"
+        if [[ "${avail_kb:-0}" -lt 524288 ]]; then  # < 512 MB
+            check_warn "Memory         $total_mem total, $avail_mem avail (偏低)"
         else
-            check_pass "内存: $total_mem 总共, $avail_mem 可用"
+            check_pass "Memory         $total_mem total, $avail_mem avail"
         fi
     fi
 fi
 
-# 检查 swap（仅 Linux）
+# swap
 if [[ "$(uname)" == "Linux" ]] && command -v free &> /dev/null; then
-    swap_total
     swap_total=$(free 2>/dev/null | awk '/^Swap:/ {print $2}')
     if [[ "$swap_total" != "0" ]] && [[ -n "$swap_total" ]]; then
-        check_pass "Swap: 已配置"
+        check_pass "Swap           已配置"
     else
-        check_warn "Swap: 未配置（生产环境建议配置 swap）"
+        check_warn "Swap           未配置（生产环境建议启用）"
     fi
 fi
 
@@ -280,16 +227,13 @@ echo ""
 # ============================================================
 # 6. Docker 资源
 # ============================================================
-echo -e "${COLOR_BOLD}6. Docker Resources${COLOR_RESET}"
+echo -e "${COLOR_BOLD}  6. Docker Usage${COLOR_RESET}"
 echo ""
 
-# 检查 Docker 磁盘使用
 if docker info &> /dev/null; then
-    docker_disk
-    docker_disk=$(docker system df 2>/dev/null | head -4 || true)
-    if [[ -n "$docker_disk" ]]; then
-        dim "$docker_disk"
-    fi
+    docker system df 2>/dev/null | head -5 | while IFS= read -r line; do
+        dim "     $line"
+    done
 fi
 
 echo ""
@@ -297,17 +241,11 @@ echo ""
 # ============================================================
 # 7. 系统信息
 # ============================================================
-echo -e "${COLOR_BOLD}7. System Info${COLOR_RESET}"
+echo -e "${COLOR_BOLD}  7. System${COLOR_RESET}"
 echo ""
 
-check_pass "OS: $(uname -s) $(uname -r)"
-check_pass "Architecture: $(uname -m)"
-
-if command -v bash &> /dev/null; then
-    bash_version
-    bash_version=$(bash --version 2>/dev/null | head -1)
-    check_pass "Shell: $bash_version"
-fi
+check_pass "OS             $(uname -s) $(uname -r) ($(uname -m))"
+command -v bash &> /dev/null && check_pass "Shell          $(bash --version 2>/dev/null | head -1)"
 
 echo ""
 
@@ -317,23 +255,18 @@ echo ""
 separator
 echo ""
 
-echo -e "检查总计: ${COLOR_BOLD}$CHECKS${COLOR_RESET} 项"
-echo -e "通过:     ${COLOR_GREEN}$((CHECKS - ISSUES - WARNINGS))${COLOR_RESET} 项"
-
-if [[ $WARNINGS -gt 0 ]]; then
-    echo -e "警告:     ${COLOR_YELLOW}$WARNINGS${COLOR_RESET} 项"
-fi
-
-if [[ $ISSUES -gt 0 ]]; then
-    echo -e "问题:     ${COLOR_RED}$ISSUES${COLOR_RESET} 项"
-fi
+passed=$((CHECKS - ISSUES - WARNINGS))
+printf "  %-12s ${COLOR_BOLD}%d${COLOR_RESET}\n" "Total checks" "$CHECKS"
+printf "  %-12s ${COLOR_GREEN}%d${COLOR_RESET}\n" "Passed" "$passed"
+[[ $WARNINGS -gt 0 ]] && printf "  %-12s ${COLOR_YELLOW}%d${COLOR_RESET}\n" "Warnings" "$WARNINGS"
+[[ $ISSUES -gt 0 ]]   && printf "  %-12s ${COLOR_RED}%d${COLOR_RESET}\n" "Issues" "$ISSUES"
 
 echo ""
 
 if [[ $ISSUES -eq 0 ]] && [[ $WARNINGS -eq 0 ]]; then
-    success "🎉 Everything is OK!"
+    success "Everything is OK!"
 elif [[ $ISSUES -eq 0 ]]; then
-    warn "发现 $WARNINGS 个警告，建议处理"
+    warn "发现 $WARNINGS 个警告，建议处理后再启动服务"
 else
     error "发现 $ISSUES 个问题，请修复后再启动服务"
 fi

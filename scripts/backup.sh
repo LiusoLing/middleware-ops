@@ -266,12 +266,10 @@ info "当前备份列表:"
 echo ""
 
 if [[ -d "$BACKUP_ROOT" ]]; then
-    backup_dirs
     backup_dirs=$(ls -1t "$BACKUP_ROOT" 2>/dev/null | head -10)
     if [[ -n "$backup_dirs" ]]; then
         while IFS= read -r dir; do
             if [[ -d "${BACKUP_ROOT}/${dir}" ]]; then
-                size
                 size=$(du -sh "${BACKUP_ROOT}/${dir}" 2>/dev/null | cut -f1)
                 printf "  ${COLOR_BOLD}%-16s${COLOR_RESET} %s\n" "$dir" "$size"
                 ls -1 "${BACKUP_ROOT}/${dir}" 2>/dev/null | while IFS= read -r f; do

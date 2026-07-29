@@ -28,149 +28,117 @@ if [[ -n "$TARGET_SERVICE" ]]; then
 fi
 
 echo ""
-echo -e "${COLOR_CYAN}${COLOR_BOLD}====================================${COLOR_RESET}"
+echo -e "${COLOR_CYAN}${COLOR_BOLD}  ═══════════════════════════════════════${COLOR_RESET}"
 if [[ -n "$TARGET_SERVICE" ]]; then
-    echo -e "${COLOR_CYAN}${COLOR_BOLD}  Middleware Status — ${TARGET_SERVICE}${COLOR_RESET}"
+    echo -e "${COLOR_CYAN}${COLOR_BOLD}    Middleware Status — ${TARGET_SERVICE}${COLOR_RESET}"
 else
-    echo -e "${COLOR_CYAN}${COLOR_BOLD}  Middleware Status${COLOR_RESET}"
+    echo -e "${COLOR_CYAN}${COLOR_BOLD}    Middleware Status${COLOR_RESET}"
 fi
-echo -e "${COLOR_CYAN}${COLOR_BOLD}====================================${COLOR_RESET}"
+echo -e "${COLOR_CYAN}${COLOR_BOLD}  ═══════════════════════════════════════${COLOR_RESET}"
 echo ""
 
-# ---- 服务状态 ----
-echo -e "${COLOR_BOLD}Services${COLOR_RESET}"
+# ── 服务状态 ──
+echo -e "${COLOR_BOLD}  Services${COLOR_RESET}"
 echo ""
 
 while IFS= read -r service; do
-    # 如果指定了目标服务，只显示该服务
-    if [[ -n "$TARGET_SERVICE" ]] && [[ "$service" != "$TARGET_SERVICE" ]]; then
-        continue
-    fi
+    [[ -n "$TARGET_SERVICE" && "$service" != "$TARGET_SERVICE" ]] && continue
 
     if is_service_running "$service" 2>/dev/null; then
-        container_id
-        container_id=$(compose_cmd ps -q "$service" 2>/dev/null)
-        health
-        health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}' "$container_id" 2>/dev/null || echo "N/A")
-        ports
-        ports=$(docker inspect -f '{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} -> {{(index $conf 0).HostPort}} {{end}}' "$container_id" 2>/dev/null || echo "N/A")
-        image
-        image=$(docker inspect -f '{{.Config.Image}}' "$container_id" 2>/dev/null || echo "N/A")
-        created
-        created=$(docker inspect -f '{{.Created}}' "$container_id" 2>/dev/null | cut -d'T' -f1 || echo "N/A")
+        cid=$(compose_cmd ps -q "$service" 2>/dev/null)
+        health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}' "$cid" 2>/dev/null || echo "N/A")
+        ports=$(docker inspect -f '{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} → {{(index $conf 0).HostPort}} {{end}}' "$cid" 2>/dev/null || echo "N/A")
+        image=$(docker inspect -f '{{.Config.Image}}' "$cid" 2>/dev/null || echo "N/A")
+        created=$(docker inspect -f '{{.Created}}' "$cid" 2>/dev/null | cut -d'T' -f1 || echo "N/A")
 
-        printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-16s${COLOR_RESET} ${COLOR_GREEN}Running${COLOR_RESET}\n" "$service"
-        dim "     Image:    $image"
-        dim "     Ports:    $ports"
-        dim "     Health:   $health"
-        dim "     Created:  $created"
+        printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-18s${COLOR_RESET} ${COLOR_GREEN}%-10s${COLOR_RESET}\n" "$service" "Running"
+        dim "       Image    $image"
+        dim "       Ports    $ports"
+        dim "       Health   $health"
+        dim "       Created  $created"
 
-        # 单服务模式显示更多详情
         if [[ -n "$TARGET_SERVICE" ]]; then
-            ip_addr
-            ip_addr=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_id" 2>/dev/null || echo "N/A")
-            dim "     IP:       $ip_addr"
-            env_vars
-            env_vars=$(docker inspect -f '{{range .Config.Env}}{{.}} {{end}}' "$container_id" 2>/dev/null | tr ' ' '\n' | grep -v 'PASSWORD\|PASS\|SECRET\|KEY' | head -10 || echo "N/A")
-            if [[ "$env_vars" != "N/A" ]]; then
-                dim "     Env:"
-                echo "$env_vars" | while IFS= read -r env_line; do
-                    [[ -n "$env_line" ]] && dim "       $env_line"
+            ip_addr=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$cid" 2>/dev/null || echo "N/A")
+            dim "       IP       $ip_addr"
+            env_vars=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$cid" 2>/dev/null | grep -v 'PASSWORD\|PASS\|SECRET\|KEY' | head -8)
+            if [[ -n "$env_vars" ]]; then
+                dim "       Env"
+                echo "$env_vars" | while IFS= read -r ev; do
+                    [[ -n "$ev" ]] && dim "         $ev"
                 done
             fi
         fi
     else
-        printf "  ${COLOR_RED}○${COLOR_RESET} ${COLOR_BOLD}%-16s${COLOR_RESET} ${COLOR_RED}Stopped${COLOR_RESET}\n" "$service"
+        printf "  ${COLOR_RED}○${COLOR_RESET} ${COLOR_BOLD}%-18s${COLOR_RESET} ${COLOR_RED}%-10s${COLOR_RESET}\n" "$service" "Stopped"
     fi
     echo ""
 done < <(get_services 2>/dev/null || true)
 
-# 全量模式显示更多信息
+# ── 全量模式：网络 & 数据卷 ──
 if [[ -z "$TARGET_SERVICE" ]]; then
-    # ---- 网络 ----
-    echo -e "${COLOR_BOLD}Network${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}  Network${COLOR_RESET}"
     echo ""
 
-    network_name="docker-network"
-    if docker network inspect "$network_name" &>/dev/null; then
-        printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-20s${COLOR_RESET} ${COLOR_GREEN}Active${COLOR_RESET}\n" "$network_name"
-        subnet
-        subnet=$(docker network inspect "$network_name" -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' 2>/dev/null || echo "N/A")
-        dim "     Subnet:   $subnet"
+    net="docker-network"
+    if docker network inspect "$net" &>/dev/null; then
+        subnet=$(docker network inspect "$net" -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' 2>/dev/null || echo "N/A")
+        printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-22s${COLOR_RESET} ${COLOR_GREEN}Active${COLOR_RESET}\n" "$net"
+        dim "       Subnet   $subnet"
     else
-        printf "  ${COLOR_RED}○${COLOR_RESET} ${COLOR_BOLD}%-20s${COLOR_RESET} ${COLOR_RED}Not Found${COLOR_RESET}\n" "$network_name"
+        printf "  ${COLOR_RED}○${COLOR_RESET} ${COLOR_BOLD}%-22s${COLOR_RESET} ${COLOR_RED}Not Found${COLOR_RESET}\n" "$net"
     fi
 
     echo ""
-
-    # ---- 数据卷 ----
-    echo -e "${COLOR_BOLD}Volumes${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}  Volumes${COLOR_RESET}"
     echo ""
 
-    while IFS= read -r volume; do
-        if docker volume inspect "$volume" &>/dev/null; then
-            mountpoint
-            mountpoint=$(docker volume inspect "$volume" -f '{{.Mountpoint}}' 2>/dev/null || echo "N/A")
-            size
-            if [[ -d "$mountpoint" ]]; then
-                size=$(du -sh "$mountpoint" 2>/dev/null | cut -f1 || echo "N/A")
-            else
-                size="N/A"
-            fi
-            printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-20s${COLOR_RESET} ${COLOR_GREEN}OK${COLOR_RESET}\n" "$volume"
-            dim "     Size:     $size"
-            dim "     Mount:    $mountpoint"
+    while IFS= read -r vol; do
+        if docker volume inspect "$vol" &>/dev/null; then
+            mp=$(docker volume inspect "$vol" -f '{{.Mountpoint}}' 2>/dev/null || echo "N/A")
+            vs=$(du -sh "$mp" 2>/dev/null | cut -f1 || echo "N/A")
+            printf "  ${COLOR_GREEN}●${COLOR_RESET} ${COLOR_BOLD}%-22s${COLOR_RESET} ${COLOR_GREEN}OK${COLOR_RESET}\n" "$vol"
+            dim "       Size     $vs"
+            dim "       Mount    $mp"
         else
-            printf "  ${COLOR_YELLOW}○${COLOR_RESET} ${COLOR_BOLD}%-20s${COLOR_RESET} ${COLOR_YELLOW}Not Created${COLOR_RESET}\n" "$volume"
+            printf "  ${COLOR_YELLOW}○${COLOR_RESET} ${COLOR_BOLD}%-22s${COLOR_RESET} ${COLOR_YELLOW}Not Created${COLOR_RESET}\n" "$vol"
         fi
         echo ""
     done < <(compose_cmd config --volumes 2>/dev/null || true)
 fi
 
-# ---- 资源使用 ----
-echo -e "${COLOR_BOLD}Resource Usage${COLOR_RESET}"
+# ── 资源使用 ──
+echo -e "${COLOR_BOLD}  Resources${COLOR_RESET}"
 echo ""
 
 while IFS= read -r service; do
-    if [[ -n "$TARGET_SERVICE" ]] && [[ "$service" != "$TARGET_SERVICE" ]]; then
-        continue
-    fi
+    [[ -n "$TARGET_SERVICE" && "$service" != "$TARGET_SERVICE" ]] && continue
 
     if is_service_running "$service" 2>/dev/null; then
-        container_id
-        container_id=$(compose_cmd ps -q "$service" 2>/dev/null)
-        stats
-        stats=$(docker stats --no-stream --format "CPU: {{.CPUPerc}} | Mem: {{.MemUsage}} ({{.MemPerc}})" "$container_id" 2>/dev/null || echo "N/A")
-        printf "  ${COLOR_BOLD}%-16s${COLOR_RESET}\n" "$service"
-        dim "     $stats"
+        cid=$(compose_cmd ps -q "$service" 2>/dev/null)
+        stats=$(docker stats --no-stream --format "CPU {{.CPUPerc}}  |  Mem {{.MemUsage}} ({{.MemPerc}})" "$cid" 2>/dev/null || echo "N/A")
+        printf "  ${COLOR_BOLD}%-18s${COLOR_RESET}\n" "$service"
+        dim "       $stats"
         echo ""
     fi
 done < <(get_services 2>/dev/null || true)
 
-# ---- 连接信息 ----
-echo -e "${COLOR_BOLD}Connection Info${COLOR_RESET}"
+# ── 连接信息 ──
+echo -e "${COLOR_BOLD}  Connections${COLOR_RESET}"
 echo ""
 
-if [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "postgres" ]]; then
-    if is_service_running "postgres" 2>/dev/null; then
-        pg_host="${POSTGRES_HOST:-localhost}"
-        pg_port="${POSTGRES_PORT:-5432}"
-        pg_user="${POSTGRES_USER:-postgres}"
-        printf "  ${COLOR_BOLD}%-16s${COLOR_RESET} postgresql://%s:****@%s:%s/${POSTGRES_DB:-postgres}\n" \
-            "PostgreSQL" "$pg_user" "$pg_host" "$pg_port"
-    fi
+if { [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "postgres" ]]; } && is_service_running "postgres" 2>/dev/null; then
+    pg_host="${POSTGRES_HOST:-localhost}"
+    pg_port="${POSTGRES_PORT:-5432}"
+    pg_user="${POSTGRES_USER:-postgres}"
+    printf "  ${COLOR_BOLD}%-18s${COLOR_RESET} postgresql://%s:****@%s:%s/${POSTGRES_DB:-postgres}\n" \
+        "PostgreSQL" "$pg_user" "$pg_host" "$pg_port"
 fi
 
-if [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "redis" ]]; then
-    if is_service_running "redis" 2>/dev/null; then
-        redis_host="${REDIS_HOST:-localhost}"
-        redis_port="${REDIS_PORT:-6379}"
-        printf "  ${COLOR_BOLD}%-16s${COLOR_RESET} redis://:%s@%s:%s\n" \
-            "Redis" "${REDIS_PASSWORD:0:4}****" "$redis_host" "$redis_port"
-    fi
+if { [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "redis" ]]; } && is_service_running "redis" 2>/dev/null; then
+    redis_host="${REDIS_HOST:-localhost}"
+    redis_port="${REDIS_PORT:-6379}"
+    printf "  ${COLOR_BOLD}%-18s${COLOR_RESET} redis://:****@%s:%s/%s\n" \
+        "Redis" "$redis_host" "$redis_port" "${REDIS_DB:-0}"
 fi
 
-echo ""
-
-separator
 echo ""

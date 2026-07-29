@@ -73,9 +73,9 @@ success "权限设置完成"
 
 # ---- 5. 拉取镜像 ----
 info "拉取 Docker 镜像..."
-compose_cmd pull 2>&1 | while IFS= read -r line; do
-    dim "  $line"
-done
+echo ""
+compose_cmd pull
+echo ""
 success "镜像拉取完成"
 
 # ---- 6. 创建 Docker 网络（如果不存在） ----
@@ -84,9 +84,9 @@ network_name="docker-network"
 if docker network inspect "$network_name" &>/dev/null; then
     success "网络 $network_name 已存在"
 else
-    compose_cmd up -d --no-start 2>&1 | tail -1
-    success "网络已创建"
-    compose_cmd down 2>/dev/null
+    compose_cmd up -d --no-start >/dev/null 2>&1
+    success "网络 $network_name 已创建"
+    compose_cmd down >/dev/null 2>&1
 fi
 
 echo ""
