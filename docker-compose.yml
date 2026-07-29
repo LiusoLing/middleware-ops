@@ -1,0 +1,136 @@
+# ============================================================
+# Middleware Docker Compose
+# ============================================================
+# 统一管理所有中间件服务
+#
+# 使用方式:
+#   ./scripts/start.sh    # 启动全部服务
+#   ./scripts/stop.sh     # 停止全部服务
+#   ./scripts/status.sh   # 查看服务状态
+#
+# 新增服务只需在此文件中添加，脚本自动支持
+# ============================================================
+
+version: "3.9"
+
+# ============================================================
+# 网络
+# ============================================================
+networks:
+  default:
+    external: false
+  docker-network:
+    name: docker-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET:-172.28.0.0/16}
+
+# ============================================================
+# 数据卷
+# ============================================================
+volumes:
+  postgres-data:
+    name: postgres-data
+  redis-data:
+    name: redis-data
+
+# ============================================================
+# 服务定义
+# ============================================================
+services:
+  # ==========================================================
+  # PostgreSQL
+  # ==========================================================
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-18}-alpine
+    container_name: postgres-${POSTGRES_VERSION:-18}
+    hostname: postgres
+    restart: unless-stopped
+    shm_size: ${POSTGRES_SHM_SIZE:-256mb}
+      
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-middleware}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: ${TZ:-Asia/Shanghai}
+
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      # 数据持久化
+      - postgres-data:/var/lib/postgresql/data
+      # 自定义参数（通过 include_dir 机制加载，不替换整个 postgresql.conf）
+      - ${POSTGRES_CONF_DIR:-./postgres/conf}/conf.d:/etc/postgresql/conf.d:ro
+      # pg_hba.conf 模板（由 initdb/000-config.sh 在首次初始化时复制到 PGDATA）
+      - ${POSTGRES_CONF_DIR:-./postgres/conf}/pg_hba.conf:/tmp/custom_pg_hba.conf:ro
+      # 初始化脚本
+      - ${POSTGRES_CONF_DIR:-./postgres/conf}/initdb:/docker-entrypoint-initdb.d:ro
+
+    networks:
+      - docker-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-middleware}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================
+  # Redis
+  # ==========================================================
+  redis:
+    image: redis:${REDIS_VERSION:-7}-alpine
+    container_name: redis${REDIS_VERSION:-7}
+    hostname: redis
+    restart: unless-stopped
+
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+    volumes:
+      # 数据持久化
+      - redis-data:/data
+
+    # 启动命令：启用 AOF 持久化 + 设置密码 + 内存限制
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --lazyfree-lazy-eviction yes
+      --lazyfree-lazy-expire yes
+      --io-threads 4
+      --tcp-keepalive 300
+
+    networks:
+      - docker-network
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
