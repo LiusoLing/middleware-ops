@@ -141,4 +141,19 @@ if { [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "redis" ]]; } && is_s
         "Redis" "$redis_host" "$redis_port" "${REDIS_DB:-0}"
 fi
 
+if { [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "sentinel" ]]; } && is_service_running "sentinel" 2>/dev/null; then
+    sentinel_host="${SENTINEL_HOST:-localhost}"
+    sentinel_port="${SENTINEL_PORT:-8858}"
+    sentinel_user="${SENTINEL_USERNAME:-sentinel}"
+    printf "  ${COLOR_BOLD}%-18s${COLOR_RESET} http://%s:%s  (user: %s)\n" \
+        "Sentinel" "$sentinel_host" "$sentinel_port" "$sentinel_user"
+fi
+
+if { [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "nacos" ]]; } && is_service_running "nacos" 2>/dev/null; then
+    nacos_host="${NACOS_HOST:-localhost}"
+    nacos_port="${NACOS_HTTP_PORT:-8080}"
+    printf "  ${COLOR_BOLD}%-18s${COLOR_RESET} http://%s:%s/nacos  (auth: nacos/nacos)\n" \
+        "Nacos" "$nacos_host" "$nacos_port"
+fi
+
 echo ""

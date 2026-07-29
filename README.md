@@ -67,6 +67,13 @@ middleware/
 ├── redis/                      # Redis 配置
 │   └── data/                   # 持久化数据（运行时，含 AOF/RDB）
 │
+├── sentinel/                   # Sentinel Dashboard 配置
+│   └── conf/
+│       └── application.properties
+│
+├── nacos/                      # Nacos 配置
+│   └── conf/
+│
 ├── backups/                    # 备份文件
 │   ├── postgres/
 │   └── redis/
@@ -89,8 +96,10 @@ middleware/
 |------|------|------|------|
 | PostgreSQL | 18-alpine | 5432 | 关系型数据库 |
 | Redis | 7-alpine | 6379 | 缓存 / 消息队列 |
+| Sentinel Dashboard | latest | 8858 | 流量控制 / 熔断降级 |
+| Nacos | v3.2.2 | 8080 / 9080 / 9081 | 注册中心 / 配置中心 |
 
-> 后续规划：MinIO、RabbitMQ、Nacos、Elasticsearch、Prometheus、Grafana、Ollama、Qdrant、Neo4j、Kafka 等。
+> 后续规划：MinIO、RabbitMQ、Elasticsearch、Prometheus、Grafana、Ollama、Qdrant、Neo4j、Kafka 等。
 
 ---
 
@@ -107,6 +116,8 @@ middleware/
 ./scripts/logs.sh              # 查看所有服务日志
 ./scripts/logs.sh postgres     # 查看 PostgreSQL 日志
 ./scripts/logs.sh redis        # 查看 Redis 日志
+./scripts/logs.sh sentinel     # 查看 Sentinel 日志
+./scripts/logs.sh nacos        # 查看 Nacos 日志
 
 # 备份恢复
 ./scripts/backup.sh            # 一键备份所有数据
@@ -136,6 +147,12 @@ middleware/
 | `REDIS_PORT` | Redis 端口 | `6379` |
 | `REDIS_PASSWORD` | Redis 密码 | 无，必须修改 |
 | `REDIS_MAXMEMORY` | Redis 最大内存 | `256mb` |
+| `SENTINEL_PORT` | Sentinel Dashboard 端口 | `8858` |
+| `SENTINEL_USERNAME` | Dashboard 登录用户名 | `sentinel` |
+| `SENTINEL_PASSWORD` | Dashboard 登录密码 | `sentinel` |
+| `NACOS_HTTP_PORT` | Nacos HTTP 端口 | `8080` |
+| `NACOS_VERSION` | Nacos 镜像版本 | `v3.2.2` |
+| `NACOS_AUTH_TOKEN` | Nacos JWT 签名密钥 | 必须修改 |
 
 ---
 

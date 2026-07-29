@@ -50,6 +50,8 @@ info "检查目录结构..."
 dirs=(
     "${PROJECT_ROOT}/postgres/data"
     "${PROJECT_ROOT}/redis/data"
+    "${PROJECT_ROOT}/sentinel/conf"
+    "${PROJECT_ROOT}/nacos/conf"
     "${PROJECT_ROOT}/backups/postgres"
     "${PROJECT_ROOT}/backups/redis"
     "${PROJECT_ROOT}/logs"
