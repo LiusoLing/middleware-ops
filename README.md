@@ -74,6 +74,9 @@ middleware/
 ├── nacos/                      # Nacos 配置
 │   └── conf/
 │
+├── dokuwiki/                   # DokuWiki 数据
+│   └── data/                   # 页面、配置、插件持久化
+│
 ├── backups/                    # 备份文件
 │   ├── postgres/
 │   └── redis/
@@ -98,6 +101,7 @@ middleware/
 | Redis | 7-alpine | 6379 | 缓存 / 消息队列 |
 | Sentinel Dashboard | latest | 8858 | 流量控制 / 熔断降级 |
 | Nacos | v3.2.2 | 8080 / 9080 / 9081 | 注册中心 / 配置中心 |
+| DokuWiki | latest | 8088 | 知识库 / Wiki |
 
 > 后续规划：MinIO、RabbitMQ、Elasticsearch、Prometheus、Grafana、Ollama、Qdrant、Neo4j、Kafka 等。
 
@@ -118,6 +122,7 @@ middleware/
 ./scripts/logs.sh redis        # 查看 Redis 日志
 ./scripts/logs.sh sentinel     # 查看 Sentinel 日志
 ./scripts/logs.sh nacos        # 查看 Nacos 日志
+./scripts/logs.sh dokuwiki     # 查看 DokuWiki 日志
 
 # 备份恢复
 ./scripts/backup.sh            # 一键备份所有数据
@@ -153,6 +158,7 @@ middleware/
 | `NACOS_HTTP_PORT` | Nacos HTTP 端口 | `8080` |
 | `NACOS_VERSION` | Nacos 镜像版本 | `v3.2.2` |
 | `NACOS_AUTH_TOKEN` | Nacos JWT 签名密钥 | 必须修改 |
+| `DOKUWIKI_PORT` | DokuWiki 端口 | `8088` |
 
 ---
 

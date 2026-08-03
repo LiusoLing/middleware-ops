@@ -52,6 +52,7 @@ dirs=(
     "${PROJECT_ROOT}/redis/data"
     "${PROJECT_ROOT}/sentinel/conf"
     "${PROJECT_ROOT}/nacos/conf"
+    "${PROJECT_ROOT}/dokuwiki/data"
     "${PROJECT_ROOT}/backups/postgres"
     "${PROJECT_ROOT}/backups/redis"
     "${PROJECT_ROOT}/logs"

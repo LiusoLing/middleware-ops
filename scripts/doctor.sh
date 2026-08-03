@@ -134,6 +134,7 @@ check_port "${POSTGRES_PORT:-5432}" "PostgreSQL"
 check_port "${REDIS_PORT:-6379}" "Redis"
 check_port "${SENTINEL_PORT:-8858}" "Sentinel"
 check_port "${NACOS_HTTP_PORT:-8080}" "Nacos HTTP"
+check_port "${DOKUWIKI_PORT:-8088}" "DokuWiki"
 
 echo ""
 
@@ -160,6 +161,7 @@ check_dir "${PROJECT_ROOT}/postgres/data"  "postgres/data"
 check_dir "${PROJECT_ROOT}/redis/data"     "redis/data"
 check_dir "${PROJECT_ROOT}/sentinel/conf"  "sentinel/conf"
 check_dir "${PROJECT_ROOT}/nacos/conf"     "nacos/conf"
+check_dir "${PROJECT_ROOT}/dokuwiki/data"  "dokuwiki/data"
 check_dir "${PROJECT_ROOT}/backups"        "backups"
 check_dir "${PROJECT_ROOT}/logs"           "logs"
 

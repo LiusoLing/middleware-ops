@@ -156,4 +156,11 @@ if { [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "nacos" ]]; } && is_s
         "Nacos" "$nacos_host" "$nacos_port"
 fi
 
+if { [[ -z "$TARGET_SERVICE" ]] || [[ "$TARGET_SERVICE" == "dokuwiki" ]]; } && is_service_running "dokuwiki" 2>/dev/null; then
+    dw_host="${DOKUWIKI_HOST:-localhost}"
+    dw_port="${DOKUWIKI_PORT:-8088}"
+    printf "  ${COLOR_BOLD}%-18s${COLOR_RESET} http://%s:%s\n" \
+        "DokuWiki" "$dw_host" "$dw_port"
+fi
+
 echo ""
