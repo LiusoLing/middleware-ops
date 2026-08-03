@@ -190,24 +190,29 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
       # 单机模式
       MODE: standalone
+
       # PostgreSQL 数据源
-      SPRING_DATASOURCE_PLATFORM: postgresql
-      MYSQL_SERVICE_HOST: postgres
-      MYSQL_SERVICE_PORT: "5432"
-      MYSQL_SERVICE_DB_NAME: ${NACOS_DB_NAME:-nacos}
-      MYSQL_SERVICE_USER: ${POSTGRES_USER:-nacos}
-      MYSQL_SERVICE_PASSWORD: ${POSTGRES_PASSWORD}
-      MYSQL_SERVICE_DB_PARAM: stringtype=unspecified
+      spring.sql.init.platform: postgresql
+      db.num: 1
+      db.url: jdbc:postgresql://postgres:5432/${NACOS_DB_NAME:-nacos}
+      db.user: ${POSTGRES_USER:-nacos}
+      db.password: ${POSTGRES_PASSWORD}
+      db.pool.config.driverClassName: org.postgresql.Driver
+      db.pool.config.connectionTestQuery: SELECT 1
+
       # 认证
       NACOS_AUTH_ENABLE: "true"
-      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:-SecretKey012345678901234567890123456789012345678901234567890123456789}
-      NACOS_AUTH_IDENTITY_KEY: ${NACOS_AUTH_IDENTITY_KEY:-serverIdentity}
-      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE:-security}
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:-SGVsbG9Ob2NvbGFzdGVyU2VjdXJlS2V5Rm9yTmFjb3MyMDI1MDExMQ==}
+      NACOS_AUTH_IDENTITY_KEY: ${NACOS_AUTH_IDENTITY_KEY:-nacos}
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE:-nosgoz-5qymba-kyzsIj}
 
     ports:
       - "${NACOS_HTTP_PORT:-8080}:8080"
       - "${NACOS_GRPC_CLIENT_PORT:-9080}:9080"
       - "${NACOS_GRPC_SERVER_PORT:-9081}:9081"
+      - "${NACOS_GRPC_PORT:-8848}:8848"
+      - "${NACOS_GRPC_PORT:-9848}:9848"
+      - "${NACOS_CLUSTER_PORT:-9849}:9849"
 
     networks:
       - docker-network
