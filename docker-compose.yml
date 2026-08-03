@@ -250,6 +250,8 @@ services:
     volumes:
       # 持久化 wiki 数据（页面、配置、插件、用户）
       - ./dokuwiki/data:/config
+      # 新增：将数据目录挂载到宿主机
+      - ./dokuwiki/data:/app/www/public/data
 
     networks:
       - docker-network
