@@ -34,6 +34,8 @@ volumes:
     name: redis-data
   dokuwiki-data:
     name: dokuwiki-data
+  skywalking-banyandb-data:
+    name: skywalking-banyandb-data
 
 # ============================================================
 # 服务定义
@@ -258,6 +260,115 @@ services:
 
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================
+  # SkyWalking BanyanDB
+  # ==========================================================
+  skywalking-banyandb:
+    image: apache/skywalking-banyandb:${BANYANDB_VERSION:-0.9.0}
+    container_name: skywalking-banyandb
+    hostname: skywalking-banyandb
+    restart: unless-stopped
+
+    command: standalone
+
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+
+    volumes:
+      # BanyanDB 默认数据目录位于 /tmp 下
+      - skywalking-banyandb-data:/tmp
+
+    networks:
+      - docker-network
+
+    healthcheck:
+      test: ["CMD", "./bydbctl", "health", "--config=-", "--addr=http://127.0.0.1:17913"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================
+  # SkyWalking OAP
+  # ==========================================================
+  skywalking-oap:
+    image: apache/skywalking-oap-server:${SKYWALKING_VERSION:-10.3.0}
+    container_name: skywalking-oap
+    hostname: skywalking-oap
+    restart: unless-stopped
+
+    depends_on:
+      skywalking-banyandb:
+        condition: service_healthy
+
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      SW_STORAGE: banyandb
+      SW_STORAGE_BANYANDB_TARGETS: skywalking-banyandb:17912
+      SW_HEALTH_CHECKER: default
+
+    ports:
+      - "${SKYWALKING_OAP_GRPC_PORT:-11800}:11800"
+      - "${SKYWALKING_OAP_HTTP_PORT:-12800}:12800"
+
+    networks:
+      - docker-network
+
+    healthcheck:
+      test: ["CMD", "/skywalking/bin/swctl", "ch"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================
+  # SkyWalking UI
+  # ==========================================================
+  skywalking-ui:
+    image: apache/skywalking-ui:${SKYWALKING_VERSION:-10.3.0}
+    container_name: skywalking-ui
+    hostname: skywalking-ui
+    restart: unless-stopped
+
+    depends_on:
+      skywalking-oap:
+        condition: service_healthy
+
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      SW_OAP_ADDRESS: http://skywalking-oap:12800
+
+    ports:
+      - "${SKYWALKING_UI_PORT:-8801}:8080"
+
+    networks:
+      - docker-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
