@@ -332,7 +332,14 @@ services:
       - docker-network
 
     healthcheck:
-      test: ["CMD", "/skywalking/bin/swctl", "health", "--base-url=http://127.0.0.1:12800/graphql"]
+      # OAP 镜像不包含 swctl，使用 bash /dev/tcp 检查 HTTP 健康端点
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/12800;
+          printf "GET /healthcheck HTTP/1.0\r\n\r\n" >&3;
+          IFS= read -r status <&3;
+          [[ "$status" == *" 200 "* ]]'
       interval: 30s
       timeout: 10s
       retries: 3
