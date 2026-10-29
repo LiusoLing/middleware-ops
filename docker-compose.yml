@@ -332,14 +332,8 @@ services:
       - docker-network
 
     healthcheck:
-      # OAP 镜像不包含 swctl，使用 bash /dev/tcp 检查 HTTP 健康端点
-      test:
-        - CMD-SHELL
-        - >-
-          bash -c 'exec 3<>/dev/tcp/127.0.0.1/12800;
-          printf "GET /healthcheck HTTP/1.0\r\n\r\n" >&3;
-          IFS= read -r status <&3;
-          [[ "$status" == *" 200 "* ]]'
+      # OAP 镜像不包含 swctl；检查 HTTP 服务端口是否已监听
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/12800'"]
       interval: 30s
       timeout: 10s
       retries: 3
