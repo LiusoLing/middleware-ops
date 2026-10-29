@@ -409,6 +409,77 @@ redis_client = redis.Redis(
 
 ---
 
+## 10. SkyWalking 链路追踪接入
+
+Middleware 已内置 SkyWalking：
+
+- UI：<http://localhost:8801>
+- Agent 上报地址：`localhost:11800`
+- OAP HTTP API：<http://localhost:12800>
+
+### 10.1 下载 Java Agent
+
+以 9.8.0 为例（Java Agent 8.x/9.x 均兼容 OAP 10.x）：
+
+```bash
+curl -LO https://archive.apache.org/dist/skywalking/java-agent/9.8.0/apache-skywalking-java-agent-9.8.0.tgz
+tar -xzf apache-skywalking-java-agent-9.8.0.tgz -C /opt
+```
+
+解压后 Agent 路径为 `/opt/skywalking-agent/skywalking-agent.jar`。
+
+### 10.2 启动参数
+
+```bash
+java \
+  -javaagent:/opt/skywalking-agent/skywalking-agent.jar \
+  -Dskywalking.agent.service_name=my-app \
+  -Dskywalking.collector.backend_service=localhost:11800 \
+  -jar my-app.jar
+```
+
+等价的系统属性与环境变量：
+
+```bash
+export SW_AGENT_NAME=my-app
+export SW_AGENT_COLLECTOR_BACKEND_SERVICES=localhost:11800
+```
+
+### 10.3 IntelliJ IDEA 配置
+
+在 Run/Debug Configurations → VM options 中填入：
+
+```text
+-javaagent:/opt/skywalking-agent/skywalking-agent.jar
+-Dskywalking.agent.service_name=my-app
+-Dskywalking.collector.backend_service=localhost:11800
+```
+
+### 10.4 容器内接入
+
+Spring Boot 应用与 middleware 共用 `docker-network` 时，后端地址应使用服务名：
+
+```yaml
+services:
+  app:
+    environment:
+      JAVA_TOOL_OPTIONS: "-javaagent:/skywalking/agent/skywalking-agent.jar"
+      SW_AGENT_NAME: my-app
+      SW_AGENT_COLLECTOR_BACKEND_SERVICES: skywalking-oap:11800
+    volumes:
+      - /opt/skywalking-agent:/skywalking/agent:ro
+    networks:
+      - docker-network
+```
+
+### 10.5 验证
+
+1. 启动基础设施：`cd middleware && ./scripts/start.sh skywalking-ui`
+2. 确认 OAP 健康：`curl -f http://localhost:12800/healthcheck`
+3. 启动应用后打开 <http://localhost:8801>，在服务列表中应出现 `my-app`。
+
+---
+
 ## 快速验证
 
 ```bash
