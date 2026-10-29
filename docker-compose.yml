@@ -332,7 +332,7 @@ services:
       - docker-network
 
     healthcheck:
-      test: ["CMD", "/skywalking/bin/swctl", "ch"]
+      test: ["CMD", "/skywalking/bin/swctl", "health", "--base-url=http://127.0.0.1:12800/graphql"]
       interval: 30s
       timeout: 10s
       retries: 3
