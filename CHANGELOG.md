@@ -7,6 +7,25 @@
 
 ---
 
+## [1.3.0] - 2026-10-30
+
+### Changed
+
+- SkyWalking OAP 升级至 11.0.0（当前最新稳定版）
+- SkyWalking UI 改用独立的 Horizon UI 1.0.1（镜像 tag `horizon-1.0.1`，容器端口 8081）
+- BanyanDB 升级至 0.11.1（兼容 SkyWalking 11 的 BanyanDB API 0.11）
+- OAP 新增 Admin REST 端口 17128，供 Horizon UI 的模板同步、集群状态、DSL 调试、Inspect 使用
+- Horizon UI 新增本地登录认证，通过 `HORIZON_AUTH_LOCAL_USERS` 配置（默认 admin/admin，务必修改）
+- `.env` 新增 `SKYWALKING_UI_VERSION`、`SKYWALKING_OAP_ADMIN_PORT`、`HORIZON_AUTH_LOCAL_USERS`
+
+### Removed
+
+- 旧版 SkyWalking UI（OAP 10.x 内置，容器端口 8080）
+- 旧 BanyanDB 数据卷 `skywalking-banyandb-data`：升级使用新卷 `skywalking-banyandb-data-v11`，历史追踪数据不保留
+- OAP 10.x 的 `SW_OAP_ADDRESS` UI 配置方式（由 Horizon 的 `HORIZON_OAP_QUERY_URL` / `HORIZON_OAP_ADMIN_URL` 取代）
+
+---
+
 ## [1.2.0] - 2026-10-29
 
 ### Added

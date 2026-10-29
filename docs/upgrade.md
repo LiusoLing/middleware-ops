@@ -99,6 +99,57 @@ Redis 升级相对简单:
 
 ---
 
+## 升级 SkyWalking 10.x → 11.x（不保留历史数据）
+
+SkyWalking 11 引入了破坏性变更：
+
+- 原内置 UI 被移除，改用独立发版的 **Horizon UI**（镜像 tag 形如 `horizon-<version>`，容器端口 8081）
+- BanyanDB 需要 0.11 及以上版本（本项目使用 0.11.1）
+- OAP 新增 Admin REST 端口 **17128**，Horizon UI 的模板同步、集群状态等功能依赖该端口
+
+本项目已改用新的 BanyanDB 数据卷 `skywalking-banyandb-data-v11`，因此升级会从空数据启动，**旧追踪数据不会保留**。
+
+### 1. 更新 `.env`
+
+从 `.env.example` 复制新增配置，或手动确认以下变量：
+
+```dotenv
+SKYWALKING_VERSION=11.0.0
+SKYWALKING_UI_VERSION=horizon-1.0.1
+BANYANDB_VERSION=0.11.1
+SKYWALKING_OAP_ADMIN_PORT=17128
+HORIZON_AUTH_LOCAL_USERS='[{"username":"admin","passwordHash":"$argon2id$...","roles":["admin"]}]'
+```
+
+`HORIZON_AUTH_LOCAL_USERS` 是 Horizon UI 的登录用户列表，不能为空，否则无法登录。默认示例账号为 `admin` / `admin`，请务必按 `.env.example` 注释生成新的 Argon2id 哈希替换。
+
+### 2. 停止旧版本
+
+```bash
+./scripts/stop.sh
+```
+
+> 旧数据卷 `skywalking-banyandb-data` 不再被使用，确认无需保留后可删除：
+> `docker volume rm skywalking-banyandb-data`
+
+### 3. 启动新版本
+
+```bash
+./scripts/start.sh
+```
+
+### 4. 验证
+
+```bash
+curl -f http://localhost:12800/healthcheck
+curl -f http://localhost:17128/debugging/config/dump
+curl -f http://localhost:8801/api/health
+```
+
+浏览器打开 <http://localhost:8801>，使用 `HORIZON_AUTH_LOCAL_USERS` 中的账号登录。
+
+---
+
 ## 回滚
 
 如果升级后出现问题:

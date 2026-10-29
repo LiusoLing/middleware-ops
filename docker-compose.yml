@@ -34,8 +34,10 @@ volumes:
     name: redis-data
   dokuwiki-data:
     name: dokuwiki-data
-  skywalking-banyandb-data:
-    name: skywalking-banyandb-data
+  # SkyWalking 11 / BanyanDB 0.11 使用新的数据格式。
+  # 使用新卷名，升级时自动从空数据启动；旧卷 skywalking-banyandb-data 可手动删除。
+  skywalking-banyandb-data-v11:
+    name: skywalking-banyandb-data-v11
 
 # ============================================================
 # 服务定义
@@ -275,7 +277,7 @@ services:
   # SkyWalking BanyanDB
   # ==========================================================
   skywalking-banyandb:
-    image: apache/skywalking-banyandb:${BANYANDB_VERSION:-0.9.0}
+    image: apache/skywalking-banyandb:${BANYANDB_VERSION:-0.11.1}
     container_name: skywalking-banyandb
     hostname: skywalking-banyandb
     restart: unless-stopped
@@ -287,7 +289,7 @@ services:
 
     volumes:
       # BanyanDB 默认数据目录位于 /tmp 下
-      - skywalking-banyandb-data:/tmp
+      - skywalking-banyandb-data-v11:/tmp
 
     networks:
       - docker-network
@@ -309,7 +311,7 @@ services:
   # SkyWalking OAP
   # ==========================================================
   skywalking-oap:
-    image: apache/skywalking-oap-server:${SKYWALKING_VERSION:-10.3.0}
+    image: apache/skywalking-oap-server:${SKYWALKING_VERSION:-11.0.0}
     container_name: skywalking-oap
     hostname: skywalking-oap
     restart: unless-stopped
@@ -323,21 +325,30 @@ services:
       SW_STORAGE: banyandb
       SW_STORAGE_BANYANDB_TARGETS: skywalking-banyandb:17912
       SW_HEALTH_CHECKER: default
+      # SkyWalking 11 默认启用以下 admin 模块；Horizon UI 的模板同步、
+      # 集群状态、DSL 调试、Inspect 等能力依赖 17128 端口。
+      SW_ADMIN_SERVER: default
+      SW_RECEIVER_RUNTIME_RULE: default
+      SW_DSL_DEBUGGING: default
+      SW_INSPECT: default
+      SW_UI_MANAGEMENT: default
 
     ports:
       - "${SKYWALKING_OAP_GRPC_PORT:-11800}:11800"
       - "${SKYWALKING_OAP_HTTP_PORT:-12800}:12800"
+      - "${SKYWALKING_OAP_ADMIN_PORT:-17128}:17128"
 
     networks:
       - docker-network
 
     healthcheck:
-      # OAP 镜像不包含 swctl；检查 HTTP 服务端口是否已监听
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/12800'"]
-      interval: 30s
+      # OAP 镜像不包含 swctl；检查查询端口与 admin 端口是否均已监听
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/12800 && exec 4<>/dev/tcp/127.0.0.1/17128'"]
+      interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 20
+      # 首次启动需向 BanyanDB 安装全部 schema，耗时可能超过 1 分钟
+      start_period: 120s
 
     logging:
       driver: "json-file"
@@ -348,8 +359,9 @@ services:
   # ==========================================================
   # SkyWalking UI
   # ==========================================================
+  # SkyWalking 11 起 UI 独立为 Horizon，版本与 OAP 解耦（Docker Hub tag: horizon-<version>）
   skywalking-ui:
-    image: apache/skywalking-ui:${SKYWALKING_VERSION:-10.3.0}
+    image: apache/skywalking-ui:${SKYWALKING_UI_VERSION:-horizon-1.0.1}
     container_name: skywalking-ui
     hostname: skywalking-ui
     restart: unless-stopped
@@ -360,21 +372,24 @@ services:
 
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      SW_OAP_ADDRESS: http://skywalking-oap:12800
+      HORIZON_OAP_QUERY_URL: http://skywalking-oap:12800
+      HORIZON_OAP_ADMIN_URL: http://skywalking-oap:17128
+      # 本地登录用户（JSON 数组，passwordHash 为 Argon2id）
+      HORIZON_AUTH_LOCAL_USERS: ${HORIZON_AUTH_LOCAL_USERS:-[]}
 
     ports:
-      - "${SKYWALKING_UI_PORT:-8801}:8080"
+      - "${SKYWALKING_UI_PORT:-8801}:8081"
 
     networks:
       - docker-network
 
     healthcheck:
-      # UI 不支持 HEAD（返回 405），使用 GET 检查首页
-      test: ["CMD-SHELL", "curl -fsS --max-time 3 http://127.0.0.1:8080/ >/dev/null || exit 1"]
+      # Horizon UI 提供无需认证的健康检查接口
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:8081/api/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
     logging:
       driver: "json-file"

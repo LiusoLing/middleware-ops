@@ -91,7 +91,8 @@ middleware/
     └── spring-boot.md          # Spring Boot 接入指南
 ```
 
-> SkyWalking 的 BanyanDB 数据保存在 Docker 命名卷 `skywalking-banyandb-data` 中。
+> SkyWalking 的 BanyanDB 数据保存在 Docker 命名卷 `skywalking-banyandb-data-v11` 中。
+> 从 10.x 升级到 11.x 时使用新卷（BanyanDB 0.11 数据格式），旧卷 `skywalking-banyandb-data` 不再使用，可执行 `docker volume rm skywalking-banyandb-data` 删除。
 
 ---
 
@@ -104,9 +105,9 @@ middleware/
 | Sentinel Dashboard | latest | 8858 | 流量控制 / 熔断降级 |
 | Nacos | v3.2.2 | 8080 / 9080 / 9081 | 注册中心 / 配置中心 |
 | DokuWiki | latest | 8088 | 知识库 / Wiki |
-| SkyWalking OAP | 10.3.0 | 11800 / 12800 | 链路追踪服务端 / Agent 上报 |
-| SkyWalking UI | 10.3.0 | 8801 | APM 可视化控制台 |
-| BanyanDB | 0.9.0 | 内部 17912 | SkyWalking 时序存储 |
+| SkyWalking OAP | 11.0.0 | 11800 / 12800 / 17128 | 链路追踪服务端 / Agent 上报 / Admin API |
+| SkyWalking UI (Horizon) | horizon-1.0.1 | 8801 | APM 可视化控制台（需登录） |
+| BanyanDB | 0.11.1 | 内部 17912 / 17913 | SkyWalking 时序存储 |
 
 > 后续规划：MinIO、RabbitMQ、Elasticsearch、Prometheus、Grafana、Ollama、Qdrant、Neo4j、Kafka 等。
 
@@ -170,14 +171,17 @@ middleware/
 | `SKYWALKING_UI_PORT` | SkyWalking UI 端口 | `8801` |
 | `SKYWALKING_OAP_GRPC_PORT` | OAP Agent gRPC 端口 | `11800` |
 | `SKYWALKING_OAP_HTTP_PORT` | OAP HTTP API 端口 | `12800` |
-| `SKYWALKING_VERSION` | SkyWalking 镜像版本 | `10.3.0` |
-| `BANYANDB_VERSION` | BanyanDB 镜像版本 | `0.9.0` |
+| `SKYWALKING_OAP_ADMIN_PORT` | OAP Admin REST 端口 | `17128` |
+| `SKYWALKING_VERSION` | SkyWalking OAP 镜像版本 | `11.0.0` |
+| `SKYWALKING_UI_VERSION` | Horizon UI 镜像 tag | `horizon-1.0.1` |
+| `BANYANDB_VERSION` | BanyanDB 镜像版本 | `0.11.1` |
+| `HORIZON_AUTH_LOCAL_USERS` | Horizon UI 本地登录用户（JSON） | `admin` / `admin`，必须修改 |
 
 ---
 
 ## 安全建议
 
-1. **立即修改密码**：`cp .env.example .env` 后编辑 `.env` 中所有 `change_me_*` 密码
+1. **立即修改密码**：`cp .env.example .env` 后编辑 `.env` 中所有 `change_me_*` 密码；SkyWalking Horizon UI 默认账号为 `admin` / `admin`，请按 `.env.example` 注释生成新的 Argon2id 哈希替换 `HORIZON_AUTH_LOCAL_USERS`
 2. **不要提交 .env**：`.gitignore` 已配置忽略 `.env` 文件
 3. **生产环境建议**：
    - 使用更强的密码（至少 32 位随机字符串）

@@ -411,15 +411,16 @@ redis_client = redis.Redis(
 
 ## 10. SkyWalking 链路追踪接入
 
-Middleware 已内置 SkyWalking：
+Middleware 已内置 SkyWalking 11.0.0 + Horizon UI：
 
-- UI：<http://localhost:8801>
+- UI：<http://localhost:8801>（默认账号 `admin` / `admin`，请按 README 修改）
 - Agent 上报地址：`localhost:11800`
 - OAP HTTP API：<http://localhost:12800>
+- OAP Admin API：<http://localhost:17128>
 
 ### 10.1 下载 Java Agent
 
-以 9.8.0 为例（Java Agent 8.x/9.x 均兼容 OAP 10.x）：
+以当前最新的 9.8.0 为例：
 
 ```bash
 curl -LO https://archive.apache.org/dist/skywalking/java-agent/9.8.0/apache-skywalking-java-agent-9.8.0.tgz
@@ -476,7 +477,7 @@ services:
 
 1. 启动基础设施：`cd middleware && ./scripts/start.sh skywalking-ui`
 2. 确认 OAP 健康：`curl -f http://localhost:12800/healthcheck`
-3. 启动应用后打开 <http://localhost:8801>，在服务列表中应出现 `my-app`。
+3. 启动应用后打开 <http://localhost:8801>，使用 `.env` 中 `HORIZON_AUTH_LOCAL_USERS` 配置的账号登录，在服务列表中应出现 `my-app`。
 
 ---
 

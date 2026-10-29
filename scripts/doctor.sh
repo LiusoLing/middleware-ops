@@ -85,6 +85,9 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
     if [[ "${REDIS_PASSWORD:-}" == "change_me_redis" ]] || [[ "${REDIS_PASSWORD:-}" == "change_you_password" ]]; then
         check_warn "Redis 密码     仍为默认值，请修改 .env"
     fi
+    if [[ -z "${HORIZON_AUTH_LOCAL_USERS:-}" ]] || [[ "${HORIZON_AUTH_LOCAL_USERS}" == "[]" ]]; then
+        check_warn "SkyWalking UI 未配置登录用户，将无法登录" "请在 .env 设置 HORIZON_AUTH_LOCAL_USERS"
+    fi
 else
     check_fail ".env           不存在" "请执行: cp .env.example .env"
 fi
@@ -135,6 +138,9 @@ check_port "${REDIS_PORT:-6379}" "Redis"
 check_port "${SENTINEL_PORT:-8858}" "Sentinel"
 check_port "${NACOS_HTTP_PORT:-8080}" "Nacos HTTP"
 check_port "${DOKUWIKI_PORT:-8088}" "DokuWiki"
+check_port "${SKYWALKING_UI_PORT:-8801}" "SkyWalking UI"
+check_port "${SKYWALKING_OAP_HTTP_PORT:-12800}" "SkyWalking OAP HTTP"
+check_port "${SKYWALKING_OAP_ADMIN_PORT:-17128}" "SkyWalking OAP Admin"
 
 echo ""
 
