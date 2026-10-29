@@ -369,7 +369,8 @@ services:
       - docker-network
 
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/ || exit 1"]
+      # UI 不支持 HEAD（返回 405），使用 GET 检查首页
+      test: ["CMD-SHELL", "curl -fsS --max-time 3 http://127.0.0.1:8080/ >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
