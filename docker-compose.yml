@@ -141,7 +141,7 @@ services:
   # Sentinel Dashboard
   # ==========================================================
   sentinel:
-    image: bladex/sentinel-dashboard:${SENTINEL_VERSION:-latest}
+    image: ochh/sentinel-dashboard:${SENTINEL_VERSION:-latest}
     container_name: sentinel-dashboard
     hostname: sentinel
     restart: unless-stopped

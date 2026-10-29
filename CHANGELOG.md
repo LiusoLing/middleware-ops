@@ -17,6 +17,10 @@
 - .env 新增 SKYWALKING_*、BANYANDB_* 配置项
 - docs/spring-boot.md 新增 SkyWalking Java Agent 接入指南
 
+### Changed
+
+- Sentinel Dashboard 默认镜像调整为 `ochh/sentinel-dashboard`
+
 ---
 
 ## [1.1.0] - 2026-07-29
