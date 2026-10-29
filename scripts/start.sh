@@ -41,13 +41,22 @@ if $has_running; then
     info "部分服务已在运行，将重新创建已更改的容器"
 fi
 
+# 确保本地镜像齐全（只拉取缺失镜像）
+ensure_images || exit 1
+
+# 构造启动参数；支持的 Compose 版本禁止启动时再次拉取
+up_args=(-d --remove-orphans)
+if compose_supports_pull_never; then
+    up_args+=(--pull never)
+fi
+
 # 启动服务
 if [[ -n "$TARGET_SERVICE" ]]; then
     info "正在启动 ${TARGET_SERVICE}..."
-    compose_cmd up -d --remove-orphans "$TARGET_SERVICE"
+    compose_cmd up "${up_args[@]}" "$TARGET_SERVICE"
 else
     info "正在启动所有服务..."
-    compose_cmd up -d --remove-orphans
+    compose_cmd up "${up_args[@]}"
 fi
 
 echo ""
