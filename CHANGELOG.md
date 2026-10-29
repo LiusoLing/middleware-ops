@@ -7,6 +7,18 @@
 
 ---
 
+## [1.2.0] - 2026-10-29
+
+### Added
+
+- SkyWalking OAP + UI 服务（10.3.0），UI 默认端口 8801
+- BanyanDB 0.9.0 存储，数据持久化到命名卷 skywalking-banyandb-data
+- OAP 暴露 11800（Agent gRPC）与 12800（HTTP API）
+- .env 新增 SKYWALKING_*、BANYANDB_* 配置项
+- docs/spring-boot.md 新增 SkyWalking Java Agent 接入指南
+
+---
+
 ## [1.1.0] - 2026-07-29
 
 ### Added

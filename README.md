@@ -2,7 +2,7 @@
 
 > 生产级中间件统一管理工程
 
-一套标准化的中间件基础设施，通过 Docker Compose 统一管理 PostgreSQL、Redis 等服务，提供一键部署、备份恢复、健康检查等运维能力。
+一套标准化的中间件基础设施，通过 Docker Compose 统一管理 PostgreSQL、Redis、SkyWalking 等服务，提供一键部署、备份恢复、健康检查等运维能力。
 
 设计目标：**易维护、易扩展、一键操作、生产可用**。
 
@@ -91,6 +91,8 @@ middleware/
     └── spring-boot.md          # Spring Boot 接入指南
 ```
 
+> SkyWalking 的 BanyanDB 数据保存在 Docker 命名卷 `skywalking-banyandb-data` 中。
+
 ---
 
 ## 包含的服务
@@ -102,6 +104,9 @@ middleware/
 | Sentinel Dashboard | latest | 8858 | 流量控制 / 熔断降级 |
 | Nacos | v3.2.2 | 8080 / 9080 / 9081 | 注册中心 / 配置中心 |
 | DokuWiki | latest | 8088 | 知识库 / Wiki |
+| SkyWalking OAP | 10.3.0 | 11800 / 12800 | 链路追踪服务端 / Agent 上报 |
+| SkyWalking UI | 10.3.0 | 8801 | APM 可视化控制台 |
+| BanyanDB | 0.9.0 | 内部 17912 | SkyWalking 时序存储 |
 
 > 后续规划：MinIO、RabbitMQ、Elasticsearch、Prometheus、Grafana、Ollama、Qdrant、Neo4j、Kafka 等。
 
@@ -123,6 +128,9 @@ middleware/
 ./scripts/logs.sh sentinel     # 查看 Sentinel 日志
 ./scripts/logs.sh nacos        # 查看 Nacos 日志
 ./scripts/logs.sh dokuwiki     # 查看 DokuWiki 日志
+./scripts/logs.sh skywalking-oap   # 查看 SkyWalking OAP 日志
+./scripts/logs.sh skywalking-ui    # 查看 SkyWalking UI 日志
+./scripts/logs.sh skywalking-banyandb  # 查看 BanyanDB 日志
 
 # 备份恢复
 ./scripts/backup.sh            # 一键备份所有数据
@@ -159,6 +167,11 @@ middleware/
 | `NACOS_VERSION` | Nacos 镜像版本 | `v3.2.2` |
 | `NACOS_AUTH_TOKEN` | Nacos JWT 签名密钥 | 必须修改 |
 | `DOKUWIKI_PORT` | DokuWiki 端口 | `8088` |
+| `SKYWALKING_UI_PORT` | SkyWalking UI 端口 | `8801` |
+| `SKYWALKING_OAP_GRPC_PORT` | OAP Agent gRPC 端口 | `11800` |
+| `SKYWALKING_OAP_HTTP_PORT` | OAP HTTP API 端口 | `12800` |
+| `SKYWALKING_VERSION` | SkyWalking 镜像版本 | `10.3.0` |
+| `BANYANDB_VERSION` | BanyanDB 镜像版本 | `0.9.0` |
 
 ---
 
