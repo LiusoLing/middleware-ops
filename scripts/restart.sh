@@ -26,6 +26,9 @@ else
     header "🔄 重启 Middleware 全部服务"
 fi
 
+# 停止前确保镜像齐全，避免拉取失败造成无谓停机
+ensure_images || exit 1
+
 # 停止
 if [[ -n "$TARGET_SERVICE" ]]; then
     info "正在停止 ${TARGET_SERVICE}..."
@@ -38,13 +41,19 @@ success "服务已停止"
 
 sleep 2
 
+# 构造启动参数；支持的 Compose 版本禁止启动时再次拉取
+up_args=(-d --remove-orphans)
+if compose_supports_pull_never; then
+    up_args+=(--pull never)
+fi
+
 # 启动
 if [[ -n "$TARGET_SERVICE" ]]; then
     info "正在启动 ${TARGET_SERVICE}..."
-    compose_cmd up -d --remove-orphans "$TARGET_SERVICE"
+    compose_cmd up "${up_args[@]}" "$TARGET_SERVICE"
 else
     info "正在启动所有服务..."
-    compose_cmd up -d --remove-orphans
+    compose_cmd up "${up_args[@]}"
 fi
 
 echo ""
