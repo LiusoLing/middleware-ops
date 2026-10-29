@@ -293,11 +293,11 @@ services:
       - docker-network
 
     healthcheck:
-      test: ["CMD", "./bydbctl", "health", "--config=-", "--addr=http://127.0.0.1:17913"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget -qO- --timeout=3 http://127.0.0.1:17913/api/healthz | grep -q SERVING"]
+      interval: 15s
       timeout: 5s
-      retries: 10
-      start_period: 20s
+      retries: 20
+      start_period: 60s
 
     logging:
       driver: "json-file"
