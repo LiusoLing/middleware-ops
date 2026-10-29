@@ -89,6 +89,73 @@ get_services() {
     compose_cmd config --services 2>/dev/null
 }
 
+# ── 确保本地镜像存在（只拉取缺失镜像）──
+ensure_images() {
+    local output image
+    local images=()
+    local present=()
+    local missing=()
+
+    output=$(compose_cmd config --images 2>/dev/null | sort -u || true)
+
+    # 旧版 Compose 不支持 config --images 时回退
+    if [[ -z "$output" ]]; then
+        output=$(compose_cmd config 2>/dev/null \
+            | awk '/^[[:space:]]+image:/ {print $2}' \
+            | sort -u || true)
+    fi
+
+    while IFS= read -r image; do
+        [[ -n "$image" ]] && images+=("$image")
+    done <<< "$output"
+
+    if [[ ${#images[@]} -eq 0 ]]; then
+        warn "未获取到镜像清单，跳过镜像检查"
+        return 0
+    fi
+
+    for image in "${images[@]}"; do
+        if docker image inspect "$image" >/dev/null 2>&1; then
+            present+=("$image")
+        else
+            missing+=("$image")
+        fi
+    done
+
+    if [[ ${#present[@]} -gt 0 ]]; then
+        info "本地已存在镜像，跳过拉取:"
+        for image in "${present[@]}"; do
+            dim "       $image"
+        done
+    fi
+
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        success "所有镜像已存在，无需拉取"
+        return 0
+    fi
+
+    info "拉取缺失镜像:"
+    for image in "${missing[@]}"; do
+        dim "       $image"
+    done
+
+    for image in "${missing[@]}"; do
+        if ! docker pull "$image"; then
+            error "镜像拉取失败: $image"
+            return 1
+        fi
+    done
+
+    success "缺失镜像拉取完成"
+}
+
+# ── 判断 Compose 是否支持 up --pull never ──
+compose_supports_pull_never() {
+    local help_text
+    help_text=$(compose_cmd up --help 2>&1 || true)
+    [[ "$help_text" == *"--pull"* && "$help_text" == *"never"* ]]
+}
+
 # ── 检查服务是否运行 ──
 is_service_running() {
     local service="$1" container_id status
